@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Tienda · Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A41;
+    --navy-light:#28405e;
+    --cream:#F7F5F0;
+    --paper:#FFFFFF;
+    --amber:#E0A458;
+    --amber-dark:#C4863C;
+    --green:#3F6C51;
+    --red:#B14A42;
+    --ink:#1B2A41;
+    --muted:#6B7280;
+    --line:#E4E0D6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink);}
+  h1,h2,h3{font-family:'Sora',sans-serif;margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* ---------- Login ---------- */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);}
+  .login-card{background:var(--paper);padding:48px 40px;border-radius:4px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .login-card h1{font-size:22px;color:var(--navy);margin-bottom:4px;}
+  .login-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-dark);margin-bottom:14px;display:block;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500;}
+  .field input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-family:inherit;background:var(--cream);}
+  .field input:focus{outline:none;border-color:var(--navy);}
+  button.primary{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;}
+  button.primary:hover{background:var(--navy-light);}
+  .toggle-mode{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
+  .toggle-mode a{color:var(--amber-dark);cursor:pointer;text-decoration:none;font-weight:600;}
+  .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+  .api-config{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);}
+  .api-config input{font-size:11px;color:var(--muted);}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--navy);color:#fff;padding:28px 0;}
+  .sidebar .brand{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px;}
+  .sidebar .brand .store-name{font-family:'Sora',sans-serif;font-weight:600;font-size:16px;}
+  .sidebar .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);opacity:.9;}
+  .nav-item{padding:13px 24px;font-size:14px;cursor:pointer;color:rgba(255,255,255,.75);border-left:3px solid transparent;}
+  .nav-item:hover{color:#fff;}
+  .nav-item.active{color:#fff;border-left-color:var(--amber);background:rgba(255,255,255,.05);font-weight:600;}
+  .nav-item.logout{position:absolute;bottom:24px;width:220px;color:rgba(255,255,255,.5);}
+  main{margin-left:220px;padding:36px 44px;max-width:980px;}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;}
+  .page-header h2{font-size:24px;}
+  .page-header .sub{color:var(--muted);font-size:13px;margin-top:4px;}
+  .btn{padding:10px 18px;background:var(--amber);color:var(--navy);border:none;border-radius:3px;font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .btn:hover{background:var(--amber-dark);}
+  .btn.secondary{background:transparent;border:1.5px solid var(--line);color:var(--ink);}
+  .btn.small{padding:6px 12px;font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:2px solid var(--line);font-weight:600;}
+  td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px;}
+  tr:last-child td{border-bottom:none;}
+  .stock-tag{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;}
+  .stock-dot{width:7px;height:7px;border-radius:50%;}
+  .stock-ok .stock-dot{background:var(--green);} .stock-ok{color:var(--green);}
+  .stock-low .stock-dot{background:var(--amber-dark);} .stock-low{color:var(--amber-dark);}
+  .stock-out .stock-dot{background:var(--red);} .stock-out{color:var(--red);}
+
+  .status-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pendiente{background:#FDF0DD;color:var(--amber-dark);}
+  .status-confirmado{background:#E4EEE8;color:var(--green);}
+  .status-en_camino{background:#E4EEF6;color:#2E5F8A;}
+  .status-entregado{background:#E7F4E9;color:var(--green);}
+  .status-cancelado{background:#FBEAE9;color:var(--red);}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);align-items:center;justify-content:center;z-index:50;}
+  .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;}
+  .modal h3{margin-bottom:18px;font-size:17px;}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN / REGISTRO ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <span class="login-eyebrow">Panel de tienda</span>
+    <h1 id="form-title">Inicia sesión</h1>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 20px;">Gestiona tu inventario y pedidos</p>
+
+    <div id="login-form">
+      <div class="field"><label>Correo</label><input type="email" id="login-email" placeholder="tienda@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="primary" onclick="login()">Entrar</button>
+    </div>
+
+    <div id="register-form" style="display:none;">
+      <div class="field"><label>Nombre de la tienda</label><input type="text" id="reg-name"></div>
+      <div class="field"><label>Correo</label><input type="email" id="reg-email"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
+      <div class="field"><label>Dirección</label><input type="text" id="reg-address"></div>
+      <div class="field"><label>Teléfono</label><input type="text" id="reg-phone"></div>
+      <button class="primary" onclick="register()">Crear tienda</button>
+    </div>
+
+    <p class="error-msg" id="error-msg"></p>
+    <p class="toggle-mode" id="toggle-text">¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a></p>
+
+    <div class="api-config">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">URL de la API</label>
+      <input type="text" id="api-url" value="https://vent-fast.onrender.com">
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">
+      <span class="eyebrow">Panel de tienda</span>
+      <div class="store-name" id="sidebar-store-name">—</div>
+    </div>
+    <div class="nav-item active" data-view="inventory" onclick="switchView('inventory')">Inventario</div>
+    <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos</div>
+    <div class="nav-item" data-view="sales" onclick="switchView('sales')">Vender</div>
+    <div class="nav-item logout" onclick="logout()">Cerrar sesión</div>
+  </div>
+
+  <main>
+    <!-- Vista Inventario -->
+    <section id="view-inventory">
+      <div class="page-header">
+        <div>
+          <h2>Inventario</h2>
+          <div class="sub">Productos, precio y stock disponible en tu tienda</div>
+        </div>
+        <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
+      </div>
+      <table>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+        <tbody id="inventory-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Pedidos -->
+    <section id="view-orders" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Pedidos</h2>
+          <div class="sub">Compras y domicilios recibidos por tu tienda</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Cliente</th><th>Entrega</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Ventas presenciales -->
+    <section id="view-sales" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Vender</h2>
+          <div class="sub">Registra una venta hecha directamente en tu tienda</div>
+        </div>
+      </div>
+      <div class="modal" style="width:100%;max-width:440px;padding:0;background:transparent;">
+        <div class="field">
+          <label>Producto</label>
+          <select id="sale-product" onchange="updateSaleLimit()" style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-family:inherit;background:var(--paper);"></select>
+        </div>
+        <div class="field"><label>Cantidad vendida</label><input type="number" id="sale-quantity" min="1" value="1"></div>
+        <button class="btn" onclick="registerSale()">Confirmar venta</button>
+        <p id="sale-message" style="font-size:13px;color:var(--green);margin-top:12px;"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ MODAL: agregar/editar inventario ============ -->
+<div class="modal-overlay" id="inventory-modal">
+  <div class="modal">
+    <h3>Agregar producto al inventario</h3>
+    <div class="field">
+      <label>Buscar producto existente o crear uno nuevo</label>
+      <input type="text" id="modal-product-search" placeholder="Escribe el nombre..." oninput="searchProducts(this.value)">
+      <div id="product-suggestions" style="margin-top:6px;font-size:13px;"></div>
+    </div>
+    <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes"></div>
+    <div class="field"><label>Imagen del producto</label><input type="file" id="modal-image-file" accept="image/*" onchange="previewProductImage(this)"><input type="url" id="modal-image-url" placeholder="O pega una URL de imagen" style="margin-top:6px;"><img id="image-preview" alt="Vista previa" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:4px;margin-top:8px;"></div>
+    <div class="field"><label>Precio</label><input type="number" id="modal-price" placeholder="0"></div>
+    <div class="field"><label>Stock</label><input type="number" id="modal-stock" placeholder="0"></div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn secondary" onclick="closeInventoryModal()" style="flex:1;">Cancelar</button>
+      <button class="btn" onclick="saveInventoryItem()" style="flex:1;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let API_URL = document.getElementById('api-url').value;
+let TOKEN = null;
+let STORE = null;
+let selectedProductId = null;
+let selectedProductName = null;
+let inventoryItems = [];
+
+function toggleMode(){
+  const isLogin = document.getElementById('login-form').style.display !== 'none';
+  document.getElementById('login-form').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('register-form').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('form-title').textContent = isLogin ? 'Crea tu tienda' : 'Inicia sesión';
+  document.getElementById('toggle-text').innerHTML = isLogin
+    ? '¿Ya tienes tienda? <a onclick="toggleMode()">Inicia sesión</a>'
+    : '¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a>';
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+function showError(msg){
+  const e = document.getElementById('error-msg');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+async function register(){
+  API_URL = document.getElementById('api-url').value;
+  const body = {
+    name: document.getElementById('reg-name').value,
+    email: document.getElementById('reg-email').value,
+    password: document.getElementById('reg-password').value,
+    address: document.getElementById('reg-address').value,
+    phone: document.getElementById('reg-phone').value,
+  };
+  try{
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'Error al registrar'); }
+    await doLogin(body.email, body.password);
+  }catch(e){ showError(e.message); }
+}
+
+async function login(){
+  API_URL = document.getElementById('api-url').value;
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  await doLogin(email, password);
+}
+
+async function doLogin(email, password){
+  try{
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+    });
+    if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'Credenciales inválidas'); }
+    const data = await res.json();
+    TOKEN = data.access_token;
+    STORE = data.store;
+    localStorage_shim_set();
+    enterApp();
+  }catch(e){ showError(e.message); }
+}
+
+// El panel no usa localStorage del navegador (no soportado en artifacts);
+// para una app de escritorio real (Electron/Tauri) puedes persistir la
+// sesión con su propio almacenamiento local.
+function localStorage_shim_set(){}
+
+function enterApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('sidebar-store-name').textContent = STORE.name;
+  loadInventory();
+}
+
+function logout(){
+  TOKEN = null; STORE = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function switchView(view){
+  document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
+  document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
+  document.getElementById('view-sales').style.display = view === 'sales' ? 'block' : 'none';
+  if(view === 'orders') loadOrders();
+  if(view === 'sales') loadSalesForm();
+}
+
+async function authFetch(path, options={}){
+  options.headers = Object.assign({}, options.headers, {'Authorization': `Bearer ${TOKEN}`});
+  return fetch(`${API_URL}${path}`, options);
+}
+
+function stockClass(stock){
+  if(stock <= 0) return 'stock-out';
+  if(stock <= 5) return 'stock-low';
+  return 'stock-ok';
+}
+
+async function loadInventory(){
+  const res = await authFetch('/stores/me/inventory');
+  const items = await res.json();
+  inventoryItems = items;
+  const tbody = document.getElementById('inventory-tbody');
+  if(items.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">Inventario vacío</span><p>Agrega tu primer producto para empezar a vender.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(item => `
+    <tr>
+      <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
+      <td>${item.product.category || '—'}</td>
+      <td class="mono">$${item.price.toLocaleString('es-CO')}</td>
+      <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${item.stock} un.</span></td>
+      <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
+    </tr>
+  `).join('');
+}
+
+async function loadSalesForm(){
+  if(inventoryItems.length === 0) await loadInventory();
+  const select = document.getElementById('sale-product');
+  if(inventoryItems.length === 0){
+    select.innerHTML = '<option value="">No hay productos en tu inventario</option>';
+    document.getElementById('sale-quantity').disabled = true;
+    return;
+  }
+  select.innerHTML = inventoryItems.map(item => `<option value="${item.product_id}">${item.product.name} · ${item.stock} disponibles</option>`).join('');
+  document.getElementById('sale-quantity').disabled = false;
+  updateSaleLimit();
+}
+
+function updateSaleLimit(){
+  const item = inventoryItems.find(i => i.product_id === parseInt(document.getElementById('sale-product').value));
+  const input = document.getElementById('sale-quantity');
+  input.max = item ? item.stock : 1;
+  if(item && parseInt(input.value) > item.stock) input.value = item.stock;
+}
+
+async function registerSale(){
+  const productId = parseInt(document.getElementById('sale-product').value);
+  const quantity = parseInt(document.getElementById('sale-quantity').value);
+  const item = inventoryItems.find(i => i.product_id === productId);
+  if(!item || !Number.isInteger(quantity) || quantity < 1 || quantity > item.stock){
+    alert('Indica una cantidad válida dentro del stock disponible'); return;
+  }
+  const res = await authFetch('/stores/me/sales', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({product_id: productId, quantity})
+  });
+  if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
+  const sale = await res.json();
+  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada. Stock actualizado.`;
+  document.getElementById('sale-quantity').value = 1;
+  inventoryItems = [];
+  await loadSalesForm();
+}
+
+async function deleteInventoryItem(productId){
+  if(!confirm('¿Quitar este producto de tu inventario?')) return;
+  await authFetch(`/stores/me/inventory/${productId}`, {method:'DELETE'});
+  loadInventory();
+}
+
+function openInventoryModal(){
+  document.getElementById('inventory-modal').style.display = 'flex';
+  document.querySelector('#inventory-modal h3').textContent = 'Agregar producto al inventario';
+  document.getElementById('modal-product-search').value = '';
+  document.getElementById('modal-category').value = '';
+  document.getElementById('modal-price').value = '';
+  document.getElementById('modal-stock').value = '';
+  document.getElementById('modal-image-file').value = '';
+  document.getElementById('modal-image-url').value = '';
+  document.getElementById('image-preview').style.display = 'none';
+  document.getElementById('product-suggestions').innerHTML = '';
+  selectedProductId = null; selectedProductName = null;
+}
+
+function openEditInventoryModal(item){
+  openInventoryModal();
+  document.querySelector('#inventory-modal h3').textContent = 'Editar producto';
+  selectedProductId = item.product_id;
+  selectedProductName = item.product.name;
+  document.getElementById('modal-product-search').value = item.product.name;
+  document.getElementById('modal-category').value = item.product.category || '';
+  document.getElementById('modal-price').value = item.price;
+  document.getElementById('modal-stock').value = item.stock;
+  document.getElementById('modal-image-url').value = item.product.image_url && !item.product.image_url.startsWith('data:') ? item.product.image_url : '';
+  document.getElementById('product-suggestions').innerHTML = '<div style="color:var(--green);">Producto seleccionado</div>';
+  if(item.product.image_url){
+    document.getElementById('image-preview').src = item.product.image_url;
+    document.getElementById('image-preview').style.display = 'block';
+  }
+}
+function closeInventoryModal(){ document.getElementById('inventory-modal').style.display = 'none'; }
+
+let searchTimeout;
+function searchProducts(q){
+  selectedProductId = null;
+  clearTimeout(searchTimeout);
+  if(q.length < 2){ document.getElementById('product-suggestions').innerHTML=''; return; }
+  searchTimeout = setTimeout(async () => {
+    const res = await fetch(`${API_URL}/products?q=${encodeURIComponent(q)}`);
+    const products = await res.json();
+    const box = document.getElementById('product-suggestions');
+    if(products.length === 0){ box.innerHTML = `<div style="color:var(--muted);">No existe, se creará uno nuevo llamado "${q}"</div>`; return; }
+    box.innerHTML = products.map(p => `<div style="padding:6px;cursor:pointer;border-bottom:1px solid var(--line);" onclick="pickProduct(${p.id}, '${p.name.replace(/'/g,"")}')">${p.name} <span style="color:var(--muted);">(${p.category||'sin categoría'})</span></div>`).join('');
+  }, 300);
+}
+function pickProduct(id, name){
+  selectedProductId = id; selectedProductName = name;
+  document.getElementById('modal-product-search').value = name;
+  document.getElementById('product-suggestions').innerHTML = `<div style="color:var(--green);">✓ Producto existente seleccionado</div>`;
+}
+
+function previewProductImage(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('image-preview').src = reader.result;
+    document.getElementById('image-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function readProductImage(){
+  const file = document.getElementById('modal-image-file').files[0];
+  if(!file) return Promise.resolve(document.getElementById('modal-image-url').value.trim() || null);
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveInventoryItem(){
+  const price = parseFloat(document.getElementById('modal-price').value);
+  const stock = parseInt(document.getElementById('modal-stock').value);
+  const name = document.getElementById('modal-product-search').value.trim();
+  if(!name || isNaN(price) || price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precio y stock con valores válidos'); return; }
+  const imageUrl = await readProductImage();
+
+  let productId = selectedProductId;
+  if(!productId){
+    const category = document.getElementById('modal-category').value;
+    const res = await fetch(`${API_URL}/products`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, category, image_url: imageUrl})
+    });
+    const prod = await res.json();
+    productId = prod.id;
+  } else if(imageUrl !== null){
+    await authFetch(`/products/${productId}/image`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({image_url: imageUrl})
+    });
+  }
+
+  await authFetch('/stores/me/inventory', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({product_id: productId, price, stock})
+  });
+  closeInventoryModal();
+  loadInventory();
+}
+
+async function loadOrders(){
+  const res = await authFetch('/orders/me');
+  const orders = await res.json();
+  const tbody = document.getElementById('orders-tbody');
+  if(orders.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="eyebrow">Sin pedidos</span><p>Aquí aparecerán los pedidos de tus clientes.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td class="mono">#${o.id}</td>
+      <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
+      <td>${o.delivery_address ? 'Domicilio: ' + o.delivery_address : 'Recoge en tienda'}</td>
+      <td class="mono">$${o.total.toLocaleString('es-CO')}</td>
+      <td><span class="status-pill status-${o.status}">${o.status.replace('_',' ')}</span></td>
+      <td>
+        <select onchange="updateOrderStatus(${o.id}, this.value)" style="padding:5px;border-radius:3px;border:1px solid var(--line);font-size:12px;">
+          <option value="">Cambiar estado...</option>
+          <option value="confirmado">Confirmado</option>
+          <option value="en_camino">En camino</option>
+          <option value="entregado">Entregado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function updateOrderStatus(orderId, status){
+  if(!status) return;
+  await authFetch(`/orders/${orderId}/status`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status})
+  });
+  loadOrders();
+}
+</script>
+</body>
+</html>
