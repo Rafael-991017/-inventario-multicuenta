@@ -1,0 +1,147 @@
+from datetime import datetime
+from typing import Optional, List
+
+from pydantic import BaseModel, EmailStr
+
+from .models import OrderStatus
+
+
+# ---------- Store ----------
+class StoreCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    offers_delivery: bool = True
+
+
+class StoreOut(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    address: Optional[str]
+    phone: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    offers_delivery: bool
+
+    class Config:
+        from_attributes = True
+
+
+class StoreLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    store: StoreOut
+
+
+# ---------- Product ----------
+class ProductCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+
+
+class ProductImageUpdate(BaseModel):
+    image_url: Optional[str] = None
+
+
+class ProductOut(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    category: Optional[str]
+    image_url: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Inventory ----------
+class InventoryUpsert(BaseModel):
+    product_id: int
+    stock: int
+    price: float
+
+
+class InventoryOut(BaseModel):
+    id: int
+    product_id: int
+    store_id: int
+    stock: int
+    price: float
+    product: ProductOut
+
+    class Config:
+        from_attributes = True
+
+
+class SaleCreate(BaseModel):
+    product_id: int
+    quantity: int
+
+
+class AvailabilityOut(BaseModel):
+    """Para el cliente: en qué tiendas hay este producto, con precio y stock."""
+    store_id: int
+    store_name: str
+    address: Optional[str]
+    latitude: Optional[float]
+    longitude: Optional[float]
+    offers_delivery: bool
+    price: float
+    stock: int
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Orders ----------
+class OrderItemCreate(BaseModel):
+    product_id: int
+    quantity: int
+
+
+class OrderCreate(BaseModel):
+    store_id: int
+    customer_name: str
+    customer_phone: str
+    delivery_address: Optional[str] = None  # None = recoge en tienda
+    items: List[OrderItemCreate]
+
+
+class OrderItemOut(BaseModel):
+    product_id: int
+    quantity: int
+    unit_price: float
+
+    class Config:
+        from_attributes = True
+
+
+class OrderOut(BaseModel):
+    id: int
+    store_id: int
+    customer_name: str
+    customer_phone: str
+    delivery_address: Optional[str]
+    status: OrderStatus
+    total: float
+    created_at: datetime
+    items: List[OrderItemOut]
+
+    class Config:
+        from_attributes = True
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
