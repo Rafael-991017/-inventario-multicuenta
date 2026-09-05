@@ -25,8 +25,12 @@ app = FastAPI(
 # En producción, reemplaza "*" por los dominios/orígenes exactos que usarás.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "http://localhost",
+        "https://localhost",
+        "capacitor://localhost",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
