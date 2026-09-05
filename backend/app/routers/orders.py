@@ -10,7 +10,7 @@ from ..database import get_db
 router = APIRouter(prefix="/orders", tags=["Pedidos"])
 
 
-@router.post("", response_model=schemas.OrderOut, status_code=201)
+@router.post("", status_code=201)
 def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
     """El cliente crea un pedido (recoger en tienda o a domicilio). Se valida
     y descuenta el stock de ESA tienda específica."""
@@ -65,7 +65,12 @@ def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
     except Exception as exc:
         db.rollback()
         raise HTTPException(500, f"No se pudo guardar el pedido: {exc}") from exc
-    return order
+    return {
+        "id": order.id,
+        "store_id": order.store_id,
+        "status": order.status,
+        "total": order.total,
+    }
 
 
 @router.get("/me", response_model=List[schemas.OrderOut])
