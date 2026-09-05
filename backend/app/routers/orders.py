@@ -47,7 +47,7 @@ def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
             raise HTTPException(400, f"Stock insuficiente para el producto {item.product_id}")
 
         inv.stock -= item.quantity
-        total += inv.price * item.quantity
+        total += float(inv.price) * item.quantity
         order_item = models.OrderItem(
             product_id=item.product_id,
             quantity=item.quantity,
