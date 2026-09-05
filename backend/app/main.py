@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from . import models
 from .database import engine
@@ -39,6 +40,14 @@ app.include_router(auth_router.router)
 app.include_router(stores_router.router)
 app.include_router(products_router.router)
 app.include_router(orders_router.router)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Error interno: {exc}"},
+    )
 
 
 @app.get("/")
