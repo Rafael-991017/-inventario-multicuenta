@@ -59,8 +59,12 @@ def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
     order.total = total
     order.items = order_items
     db.add(order)
-    db.commit()
-    db.refresh(order)
+    try:
+        db.commit()
+        db.refresh(order)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, f"No se pudo guardar el pedido: {exc}") from exc
     return order
 
 
