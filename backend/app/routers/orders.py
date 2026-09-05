@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import models, schemas, auth
@@ -27,6 +28,8 @@ def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
         customer_phone=order_in.customer_phone,
         delivery_address=order_in.delivery_address,
     )
+    if db.bind.dialect.name == "sqlite":
+        order.id = (db.query(func.max(models.Order.id)).scalar() or 0) + 1
     total = 0.0
     order_items = []
 
@@ -46,13 +49,14 @@ def create_order(order_in: schemas.OrderCreate, db: Session = Depends(get_db)):
 
         inv.stock -= item.quantity
         total += inv.price * item.quantity
-        order_items.append(
-            models.OrderItem(
-                product_id=item.product_id,
-                quantity=item.quantity,
-                unit_price=inv.price,
-            )
+        order_item = models.OrderItem(
+            product_id=item.product_id,
+            quantity=item.quantity,
+            unit_price=inv.price,
         )
+        if db.bind.dialect.name == "sqlite":
+            order_item.id = (db.query(func.max(models.OrderItem.id)).scalar() or 0) + len(order_items) + 1
+        order_items.append(order_item)
 
     order.total = total
     order.items = order_items
