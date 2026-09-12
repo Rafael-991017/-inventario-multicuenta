@@ -2,14 +2,17 @@ services:
   - type: web
     name: vent-fast
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
       - key: FIREBASE_PROJECT_ID
-        value: vent-d6010
+        value: inventario-multicuenta
       - key: FIRESTORE_DATABASE_ID
-        value: default
+        value: "(default)"
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: JWT_SECRET_KEY
         sync: false
