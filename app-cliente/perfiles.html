@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vent Inventario · Perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#1B2A41;--cream:#F7F5F0;--paper:#fff;--amber:#E0A458;--green:#3F6C51;--ink:#1B2A41;--muted:#6B7280;--line:#E4E0D6}
+  *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif}h1,h2{font-family:'Sora',sans-serif;margin:0}.shell{width:min(560px,100%);margin:auto;padding:28px 18px}.hero{background:var(--navy);color:#fff;padding:28px 22px;border-radius:0 0 22px 22px}.eyebrow{color:var(--amber);font:600 11px monospace;letter-spacing:.1em;text-transform:uppercase}.hero h1{font-size:27px;margin-top:10px}.hero p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.5}.section-title{font-size:18px;margin:26px 0 12px}.profile-card{display:block;width:100%;text-align:left;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px rgba(27,42,65,.06)}.profile-card:hover{border-color:var(--amber)}.profile-card strong{display:block;font:600 16px 'Sora',sans-serif}.profile-card span{display:block;color:var(--muted);font-size:13px;margin-top:6px}.profile-card .tag{display:inline-block;color:var(--green);font-size:11px;font-weight:700;margin-top:12px}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:22px}
+</style>
+</head>
+<body>
+<header class="hero"><div class="shell"><span class="eyebrow">Vent Inventario</span><h1>¿Cómo quieres entrar?</h1><p>Elige el perfil que usarás en esta aplicación.</p></div></header>
+<main class="shell"><h2 class="section-title">Perfiles móviles</h2><button class="profile-card" onclick="go('index.html')"><strong>Cliente</strong><span>Busca productos, compara tiendas y realiza pedidos.</span><span class="tag">Comprar y seguir pedidos</span></button><button class="profile-card" onclick="go('domiciliario.html')"><strong>Domiciliario</strong><span>Consulta entregas, comparte tu ubicación y actualiza estados.</span><span class="tag">Repartir pedidos</span></button><h2 class="section-title">Perfil de tienda</h2><button class="profile-card" onclick="showStoreNote()"><strong>Tienda</strong><span>Gestiona inventario, ventas y pedidos desde el panel web.</span><span class="tag">Abrir panel de tienda</span></button><p class="note" id="store-note">El panel de tienda seguirá disponible como aplicación web de escritorio mientras terminamos su adaptación móvil.</p></main>
+<script>
+function go(path){ window.location.href = path; }
+function showStoreNote(){ document.getElementById('store-note').textContent = 'Abre panel-tienda/index.html desde tu computador para administrar la tienda.'; }
+</script>
+</body>
+</html>

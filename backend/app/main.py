@@ -1,15 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import models
-from .database import engine
 from .routers import auth as auth_router
 from .routers import stores as stores_router
 from .routers import products as products_router
 from .routers import orders as orders_router
-
-# Crea las tablas si no existen
-models.Base.metadata.create_all(bind=engine)
+from .routers import couriers as couriers_router
 
 app = FastAPI(
     title="API Inventario Multi-Tienda",
@@ -26,6 +22,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "null",
         "http://localhost",
         "https://localhost",
         "capacitor://localhost",
@@ -39,6 +36,7 @@ app.include_router(auth_router.router)
 app.include_router(stores_router.router)
 app.include_router(products_router.router)
 app.include_router(orders_router.router)
+app.include_router(couriers_router.router)
 
 
 @app.get("/")

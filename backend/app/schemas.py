@@ -12,6 +12,9 @@ class StoreCreate(BaseModel):
     email: EmailStr
     password: str
     address: Optional[str] = None
+    neighborhood: Optional[str] = None
+    municipality: Optional[str] = None
+    department: Optional[str] = None
     phone: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -23,6 +26,9 @@ class StoreOut(BaseModel):
     name: str
     email: EmailStr
     address: Optional[str]
+    neighborhood: Optional[str]
+    municipality: Optional[str]
+    department: Optional[str]
     phone: Optional[str]
     latitude: Optional[float]
     longitude: Optional[float]
@@ -37,10 +43,45 @@ class StoreLogin(BaseModel):
     password: str
 
 
+class StoreUpdate(BaseModel):
+    name: str
+    address: Optional[str] = None
+    neighborhood: Optional[str] = None
+    municipality: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    offers_delivery: bool = True
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     store: StoreOut
+
+
+class CourierCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: str
+    vehicle_type: str = "moto"
+
+
+class CourierOut(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    phone: str
+    vehicle_type: str
+    available: bool = False
+
+
+class CourierToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    courier: CourierOut
 
 
 # ---------- Product ----------
@@ -69,16 +110,18 @@ class ProductOut(BaseModel):
 # ---------- Inventory ----------
 class InventoryUpsert(BaseModel):
     product_id: int
-    stock: int
+    stock: float
     price: float
+    unit: str = "unidad"
 
 
 class InventoryOut(BaseModel):
     id: int
     product_id: int
     store_id: int
-    stock: int
+    stock: float
     price: float
+    unit: str = "unidad"
     product: ProductOut
 
     class Config:
@@ -87,7 +130,8 @@ class InventoryOut(BaseModel):
 
 class SaleCreate(BaseModel):
     product_id: int
-    quantity: int
+    quantity: float
+    unit: str = "unidad"
 
 
 class AvailabilityOut(BaseModel):
@@ -99,7 +143,8 @@ class AvailabilityOut(BaseModel):
     longitude: Optional[float]
     offers_delivery: bool
     price: float
-    stock: int
+    stock: float
+    unit: str = "unidad"
 
     class Config:
         from_attributes = True
@@ -108,7 +153,7 @@ class AvailabilityOut(BaseModel):
 # ---------- Orders ----------
 class OrderItemCreate(BaseModel):
     product_id: int
-    quantity: int
+    quantity: float
 
 
 class OrderCreate(BaseModel):
@@ -116,13 +161,15 @@ class OrderCreate(BaseModel):
     customer_name: str
     customer_phone: str
     delivery_address: Optional[str] = None  # None = recoge en tienda
+    payment_method: str = "contra_entrega"
     items: List[OrderItemCreate]
 
 
 class OrderItemOut(BaseModel):
     product_id: int
-    quantity: int
+    quantity: float
     unit_price: float
+    unit: str = "unidad"
 
     class Config:
         from_attributes = True

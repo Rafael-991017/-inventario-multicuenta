@@ -79,8 +79,35 @@
   .status-cancelado{background:#FBEAE9;color:var(--red);}
 
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);align-items:center;justify-content:center;z-index:50;}
-  .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;}
+  .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;max-height:calc(100vh - 32px);overflow-y:auto;}
   .modal h3{margin-bottom:18px;font-size:17px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px;}
+  .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:16px 18px;}
+  .summary-card .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .summary-card .value{font:700 24px 'IBM Plex Mono',monospace;color:var(--ink);margin-top:8px;}
+  .summary-card.warning .value{color:var(--amber-dark);}
+  .inventory-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;}
+  .inventory-toolbar input{width:260px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;background:var(--paper);font:13px 'Inter',sans-serif;}
+  .inventory-toolbar input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
+  .sale-card{width:100%;max-width:480px;padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:5px;}
+  .sale-search{position:relative;}
+  .sale-search input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:3px;background:var(--paper);font:14px 'Inter',sans-serif;}
+  .sale-search input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
+  .sale-suggestions{position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--paper);border:1px solid var(--line);box-shadow:0 8px 20px rgba(27,42,65,.12);}
+  .sale-suggestion{padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:12px;font-size:13px;}
+  .sale-suggestion:hover{background:var(--cream);}
+  .sale-suggestion small{color:var(--muted);}
+  .sale-selected{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;background:var(--cream);font-size:13px;}
+  .sale-unit{color:var(--green);font-weight:700;}
+  .sale-quantity-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:end;}
+  .profile-card{max-width:620px;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:24px;}
+  .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .profile-grid .field:first-child{grid-column:1/-1;}
+  .checkbox-field{display:flex;align-items:center;gap:8px;margin:4px 0 20px;font-size:13px;color:var(--ink);}
+  .checkbox-field input{width:16px;height:16px;accent-color:var(--green);}
+  @media(max-width:520px){.profile-grid{grid-template-columns:1fr}.profile-grid .field:first-child{grid-column:auto}}
+  @media(max-width:700px){.sidebar{width:76px}.sidebar .brand{padding-left:12px;padding-right:12px}.sidebar .brand .eyebrow,.sidebar .brand .store-name,.nav-item{font-size:0}.nav-item{width:76px;padding:16px 0;text-align:center}.nav-item::first-letter{font-size:18px}.nav-item.logout{width:76px}.sidebar .brand::after{content:'V';font:700 24px 'Sora',sans-serif;color:var(--amber)}main{margin-left:76px;padding:24px 18px}.summary-grid{grid-template-columns:1fr}.inventory-toolbar{align-items:stretch;flex-direction:column}.inventory-toolbar input{width:100%}table{display:block;overflow-x:auto;white-space:nowrap}}
+  @media(max-width:520px){.modal-overlay{padding:12px;align-items:flex-start;overflow-y:auto}.modal{width:100%;padding:24px 20px;max-height:none;margin:auto 0;}}
   .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
   .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
 </style>
@@ -104,8 +131,11 @@
       <div class="field"><label>Nombre de la tienda</label><input type="text" id="reg-name"></div>
       <div class="field"><label>Correo</label><input type="email" id="reg-email"></div>
       <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
-      <div class="field"><label>Dirección</label><input type="text" id="reg-address"></div>
-      <div class="field"><label>Teléfono</label><input type="text" id="reg-phone"></div>
+      <div class="field"><label>Dirección exacta</label><input type="text" id="reg-address" placeholder="Calle 10 # 20-30"></div>
+      <div class="field"><label>Barrio</label><input type="text" id="reg-neighborhood" placeholder="Nombre del barrio"></div>
+      <div class="field"><label>Municipio</label><input type="text" id="reg-municipality" placeholder="Ciudad o municipio"></div>
+      <div class="field"><label>Departamento</label><input type="text" id="reg-department" placeholder="Departamento"></div>
+      <div class="field"><label>Número de contacto</label><input type="tel" id="reg-phone" placeholder="300 000 0000"></div>
       <button class="primary" onclick="register()">Crear tienda</button>
     </div>
 
@@ -129,6 +159,7 @@
     <div class="nav-item active" data-view="inventory" onclick="switchView('inventory')">Inventario</div>
     <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos</div>
     <div class="nav-item" data-view="sales" onclick="switchView('sales')">Vender</div>
+    <div class="nav-item" data-view="profile" onclick="switchView('profile')">Mi tienda</div>
     <div class="nav-item logout" onclick="logout()">Cerrar sesión</div>
   </div>
 
@@ -141,6 +172,18 @@
           <div class="sub">Productos, precio y stock disponible en tu tienda</div>
         </div>
         <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
+      </div>
+      <div class="summary-grid" aria-label="Resumen del inventario">
+        <div class="summary-card"><div class="label">Productos activos</div><div class="value" id="summary-products">0</div></div>
+        <div class="summary-card"><div class="label">Unidades disponibles</div><div class="value" id="summary-units">0</div></div>
+        <div class="summary-card warning"><div class="label">Stock bajo</div><div class="value" id="summary-low-stock">0</div></div>
+        <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="summary-sales-count">0</div></div>
+        <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div></div>
+        <div class="summary-card warning"><div class="label">Pedidos pendientes</div><div class="value" id="summary-pending-orders">0</div></div>
+      </div>
+      <div class="inventory-toolbar">
+        <strong>Tu catálogo</strong>
+        <input type="search" id="inventory-search" placeholder="Buscar en inventario..." oninput="renderInventory(this.value)">
       </div>
       <table>
         <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
@@ -170,14 +213,42 @@
           <div class="sub">Registra una venta hecha directamente en tu tienda</div>
         </div>
       </div>
-      <div class="modal" style="width:100%;max-width:440px;padding:0;background:transparent;">
+      <div class="sale-card">
         <div class="field">
-          <label>Producto</label>
-          <select id="sale-product" onchange="updateSaleLimit()" style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-family:inherit;background:var(--paper);"></select>
+          <label>Buscar producto</label>
+          <div class="sale-search">
+            <input type="search" id="sale-product-search" placeholder="Escribe para buscar..." oninput="searchSaleProducts(this.value)" autocomplete="off">
+            <div id="sale-suggestions" class="sale-suggestions" style="display:none;"></div>
+          </div>
+          <div id="sale-selected" class="sale-selected" style="display:none;"></div>
         </div>
-        <div class="field"><label>Cantidad vendida</label><input type="number" id="sale-quantity" min="1" value="1"></div>
+        <div class="sale-quantity-row">
+          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="0.01" step="1" value="1"></div>
+          <div class="field"><label>Unidad</label><input id="sale-unit-display" value="unidad" readonly></div>
+        </div>
         <button class="btn" onclick="registerSale()">Confirmar venta</button>
         <p id="sale-message" style="font-size:13px;color:var(--green);margin-top:12px;"></p>
+      </div>
+    </section>
+
+    <section id="view-profile" style="display:none;">
+      <div class="page-header">
+        <div><h2>Mi tienda</h2><div class="sub">Mantén actualizados tus datos y ubicación</div></div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-grid">
+          <div class="field"><label>Nombre de la tienda</label><input type="text" id="profile-name"></div>
+          <div class="field"><label>Dirección exacta</label><input type="text" id="profile-address" placeholder="Calle 10 # 20-30"></div>
+          <div class="field"><label>Barrio</label><input type="text" id="profile-neighborhood"></div>
+          <div class="field"><label>Municipio</label><input type="text" id="profile-municipality"></div>
+          <div class="field"><label>Departamento</label><input type="text" id="profile-department"></div>
+          <div class="field"><label>Número de contacto</label><input type="tel" id="profile-phone"></div>
+          <div class="field"><label>Latitud (opcional)</label><input type="number" id="profile-latitude" step="any"></div>
+          <div class="field"><label>Longitud (opcional)</label><input type="number" id="profile-longitude" step="any"></div>
+        </div>
+        <label class="checkbox-field"><input type="checkbox" id="profile-delivery"> Ofrezco servicio a domicilio</label>
+        <button class="btn" onclick="saveProfile()">Guardar cambios</button>
+        <p id="profile-message" style="font-size:13px;color:var(--green);margin:12px 0 0;"></p>
       </div>
     </section>
   </main>
@@ -195,7 +266,8 @@
     <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes"></div>
     <div class="field"><label>Imagen del producto</label><input type="file" id="modal-image-file" accept="image/*" onchange="previewProductImage(this)"><input type="url" id="modal-image-url" placeholder="O pega una URL de imagen" style="margin-top:6px;"><img id="image-preview" alt="Vista previa" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:4px;margin-top:8px;"></div>
     <div class="field"><label>Precio</label><input type="number" id="modal-price" placeholder="0"></div>
-    <div class="field"><label>Stock</label><input type="number" id="modal-stock" placeholder="0"></div>
+    <div class="field"><label>Stock disponible</label><input type="number" id="modal-stock" placeholder="0" min="0" step="0.01"></div>
+    <div class="field"><label>Tipo de venta</label><select id="modal-unit"><option value="unidad">Por unidad</option><option value="kg">Por kilogramo (kg)</option><option value="lb">Por libra (lb)</option></select></div>
     <div style="display:flex;gap:10px;margin-top:8px;">
       <button class="btn secondary" onclick="closeInventoryModal()" style="flex:1;">Cancelar</button>
       <button class="btn" onclick="saveInventoryItem()" style="flex:1;">Guardar</button>
@@ -235,6 +307,9 @@ async function register(){
     email: document.getElementById('reg-email').value,
     password: document.getElementById('reg-password').value,
     address: document.getElementById('reg-address').value,
+    neighborhood: document.getElementById('reg-neighborhood').value,
+    municipality: document.getElementById('reg-municipality').value,
+    department: document.getElementById('reg-department').value,
     phone: document.getElementById('reg-phone').value,
   };
   try{
@@ -279,6 +354,16 @@ function enterApp(){
   document.getElementById('app').style.display = 'block';
   document.getElementById('sidebar-store-name').textContent = STORE.name;
   loadInventory();
+  loadStoreSummary();
+}
+
+async function loadStoreSummary(){
+  const response = await authFetch('/stores/me/summary');
+  if(!response.ok) return;
+  const summary = await response.json();
+  document.getElementById('summary-sales-count').textContent = summary.sales_count;
+  document.getElementById('summary-sales-total').textContent = `$${Number(summary.sales_total).toLocaleString('es-CO')}`;
+  document.getElementById('summary-pending-orders').textContent = summary.pending_orders;
 }
 
 function logout(){
@@ -292,8 +377,10 @@ function switchView(view){
   document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
   document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
   document.getElementById('view-sales').style.display = view === 'sales' ? 'block' : 'none';
+  document.getElementById('view-profile').style.display = view === 'profile' ? 'block' : 'none';
   if(view === 'orders') loadOrders();
   if(view === 'sales') loadSalesForm();
+  if(view === 'profile') loadProfile();
 }
 
 async function authFetch(path, options={}){
@@ -311,9 +398,24 @@ async function loadInventory(){
   const res = await authFetch('/stores/me/inventory');
   const items = await res.json();
   inventoryItems = items;
+  updateInventorySummary();
+  renderInventory(document.getElementById('inventory-search').value);
+}
+
+function updateInventorySummary(){
+  document.getElementById('summary-products').textContent = inventoryItems.length;
+  document.getElementById('summary-units').textContent = inventoryItems.reduce((sum, item) => sum + item.stock, 0).toLocaleString('es-CO');
+  document.getElementById('summary-low-stock').textContent = inventoryItems.filter(item => item.stock <= 5).length;
+}
+
+function renderInventory(search = ''){
+  const normalizedSearch = search.trim().toLowerCase();
+  const items = inventoryItems.filter(item =>
+    !normalizedSearch || item.product.name.toLowerCase().includes(normalizedSearch)
+  );
   const tbody = document.getElementById('inventory-tbody');
   if(items.length === 0){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">Inventario vacío</span><p>Agrega tu primer producto para empezar a vender.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto para empezar a vender.'}</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(item => `
@@ -321,7 +423,7 @@ async function loadInventory(){
       <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
       <td>${item.product.category || '—'}</td>
       <td class="mono">$${item.price.toLocaleString('es-CO')}</td>
-      <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${item.stock} un.</span></td>
+      <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${formatQuantity(item.stock)} ${item.unit || 'unidad'}</span></td>
       <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
     </tr>
   `).join('');
@@ -329,39 +431,111 @@ async function loadInventory(){
 
 async function loadSalesForm(){
   if(inventoryItems.length === 0) await loadInventory();
-  const select = document.getElementById('sale-product');
   if(inventoryItems.length === 0){
-    select.innerHTML = '<option value="">No hay productos en tu inventario</option>';
+    document.getElementById('sale-product-search').placeholder = 'No hay productos en tu inventario';
+    document.getElementById('sale-product-search').disabled = true;
     document.getElementById('sale-quantity').disabled = true;
     return;
   }
-  select.innerHTML = inventoryItems.map(item => `<option value="${item.product_id}">${item.product.name} · ${item.stock} disponibles</option>`).join('');
+  document.getElementById('sale-product-search').disabled = false;
   document.getElementById('sale-quantity').disabled = false;
-  updateSaleLimit();
 }
 
-function updateSaleLimit(){
-  const item = inventoryItems.find(i => i.product_id === parseInt(document.getElementById('sale-product').value));
+function loadProfile(){
+  document.getElementById('profile-name').value = STORE.name || '';
+  document.getElementById('profile-address').value = STORE.address || '';
+  document.getElementById('profile-neighborhood').value = STORE.neighborhood || '';
+  document.getElementById('profile-municipality').value = STORE.municipality || '';
+  document.getElementById('profile-department').value = STORE.department || '';
+  document.getElementById('profile-phone').value = STORE.phone || '';
+  document.getElementById('profile-latitude').value = STORE.latitude ?? '';
+  document.getElementById('profile-longitude').value = STORE.longitude ?? '';
+  document.getElementById('profile-delivery').checked = STORE.offers_delivery !== false;
+  document.getElementById('profile-message').textContent = '';
+}
+
+async function saveProfile(){
+  const name = document.getElementById('profile-name').value.trim();
+  const phone = document.getElementById('profile-phone').value.trim();
+  if(name.length < 2){ document.getElementById('profile-message').textContent = 'Escribe un nombre válido para la tienda.'; return; }
+  const res = await authFetch('/stores/me', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name,
+      address: document.getElementById('profile-address').value.trim() || null,
+      neighborhood: document.getElementById('profile-neighborhood').value.trim() || null,
+      municipality: document.getElementById('profile-municipality').value.trim() || null,
+      department: document.getElementById('profile-department').value.trim() || null,
+      phone: phone || null,
+      latitude: parseOptionalNumber('profile-latitude'),
+      longitude: parseOptionalNumber('profile-longitude'),
+      offers_delivery: document.getElementById('profile-delivery').checked
+    })
+  });
+  if(!res.ok){ document.getElementById('profile-message').textContent = 'No se pudieron guardar los cambios.'; return; }
+  STORE = await res.json();
+  document.getElementById('sidebar-store-name').textContent = STORE.name;
+  document.getElementById('profile-message').textContent = 'Cambios guardados correctamente.';
+}
+
+function parseOptionalNumber(id){
+  const value = document.getElementById(id).value.trim();
+  return value === '' ? null : Number(value);
+}
+
+let saleSearchTimeout;
+let selectedSaleItem = null;
+
+function searchSaleProducts(query){
+  clearTimeout(saleSearchTimeout);
+  const box = document.getElementById('sale-suggestions');
+  const normalizedQuery = query.trim().toLowerCase();
+  if(!normalizedQuery){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  saleSearchTimeout = setTimeout(() => {
+    const matches = inventoryItems.filter(item => item.product.name.toLowerCase().includes(normalizedQuery));
+    box.innerHTML = matches.length ? matches.map(item => `
+      <div class="sale-suggestion" onclick="selectSaleProduct(${item.product_id})">
+        <span>${item.product.name}</span><small>${formatQuantity(item.stock)} ${item.unit || 'unidad'} disponibles</small>
+      </div>`).join('') : '<div class="sale-suggestion"><small>No hay coincidencias en tu inventario</small></div>';
+    box.style.display = 'block';
+  }, 120);
+}
+
+function formatQuantity(value){
+  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 2});
+}
+
+function selectSaleProduct(productId){
+  selectedSaleItem = inventoryItems.find(item => item.product_id === productId);
+  const unit = selectedSaleItem.unit || 'unidad';
+  document.getElementById('sale-product-search').value = selectedSaleItem.product.name;
+  document.getElementById('sale-suggestions').style.display = 'none';
+  document.getElementById('sale-selected').style.display = 'flex';
+  document.getElementById('sale-selected').innerHTML = `<span>Disponible: ${formatQuantity(selectedSaleItem.stock)} ${unit}</span><span class="sale-unit">$${selectedSaleItem.price.toLocaleString('es-CO')} / ${unit}</span>`;
+  document.getElementById('sale-unit-display').value = unit;
+  document.getElementById('sale-quantity-label').textContent = `Cantidad vendida (${unit})`;
   const input = document.getElementById('sale-quantity');
-  input.max = item ? item.stock : 1;
-  if(item && parseInt(input.value) > item.stock) input.value = item.stock;
+  input.max = selectedSaleItem.stock;
+  input.step = unit === 'unidad' ? '1' : '0.01';
+  input.value = unit === 'unidad' ? '1' : '0.5';
 }
 
 async function registerSale(){
-  const productId = parseInt(document.getElementById('sale-product').value);
-  const quantity = parseInt(document.getElementById('sale-quantity').value);
-  const item = inventoryItems.find(i => i.product_id === productId);
-  if(!item || !Number.isInteger(quantity) || quantity < 1 || quantity > item.stock){
+  const quantity = parseFloat(document.getElementById('sale-quantity').value);
+  if(!selectedSaleItem || !Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock){
     alert('Indica una cantidad válida dentro del stock disponible'); return;
   }
   const res = await authFetch('/stores/me/sales', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({product_id: productId, quantity})
+    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity, unit: selectedSaleItem.unit || 'unidad'})
   });
   if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
   const sale = await res.json();
   document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada. Stock actualizado.`;
   document.getElementById('sale-quantity').value = 1;
+  document.getElementById('sale-product-search').value = '';
+  document.getElementById('sale-selected').style.display = 'none';
+  selectedSaleItem = null;
   inventoryItems = [];
   await loadSalesForm();
 }
@@ -379,6 +553,7 @@ function openInventoryModal(){
   document.getElementById('modal-category').value = '';
   document.getElementById('modal-price').value = '';
   document.getElementById('modal-stock').value = '';
+  document.getElementById('modal-unit').value = 'unidad';
   document.getElementById('modal-image-file').value = '';
   document.getElementById('modal-image-url').value = '';
   document.getElementById('image-preview').style.display = 'none';
@@ -395,6 +570,7 @@ function openEditInventoryModal(item){
   document.getElementById('modal-category').value = item.product.category || '';
   document.getElementById('modal-price').value = item.price;
   document.getElementById('modal-stock').value = item.stock;
+  document.getElementById('modal-unit').value = item.unit || 'unidad';
   document.getElementById('modal-image-url').value = item.product.image_url && !item.product.image_url.startsWith('data:') ? item.product.image_url : '';
   document.getElementById('product-suggestions').innerHTML = '<div style="color:var(--green);">Producto seleccionado</div>';
   if(item.product.image_url){
@@ -446,7 +622,8 @@ function readProductImage(){
 
 async function saveInventoryItem(){
   const price = parseFloat(document.getElementById('modal-price').value);
-  const stock = parseInt(document.getElementById('modal-stock').value);
+  const stock = parseFloat(document.getElementById('modal-stock').value);
+  const unit = document.getElementById('modal-unit').value;
   const name = document.getElementById('modal-product-search').value.trim();
   if(!name || isNaN(price) || price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precio y stock con valores válidos'); return; }
   const imageUrl = await readProductImage();
@@ -469,7 +646,7 @@ async function saveInventoryItem(){
 
   await authFetch('/stores/me/inventory', {
     method:'PUT', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({product_id: productId, price, stock})
+    body: JSON.stringify({product_id: productId, price, stock, unit})
   });
   closeInventoryModal();
   loadInventory();

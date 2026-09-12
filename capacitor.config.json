@@ -1,0 +1,8 @@
+{
+  "appId": "com.inventario.cliente",
+  "appName": "Vent Inventario",
+  "webDir": "app-cliente",
+  "server": {
+    "cleartext": true
+  }
+}

@@ -21,14 +21,16 @@ uvicorn app.main:app --reload
 
 La API queda en `http://localhost:8000`. Ve a `http://localhost:8000/docs` para ver y probar todos los endpoints automáticamente (documentación interactiva incluida por FastAPI).
 
-Usa SQLite por defecto (`inventario.db`, se crea solo). Para conectar PostgreSQL, define `DATABASE_URL` antes de iniciar la API:
+La persistencia usa **Firebase Cloud Firestore**. Antes de iniciar la API, crea un proyecto en Firebase, activa Firestore y configura una cuenta de servicio. Puedes usar la variable estándar de Google:
 
 ```powershell
-$env:DATABASE_URL = "postgresql+psycopg://usuario:clave@localhost:5432/inventario"
+$env:GOOGLE_APPLICATION_CREDENTIALS = "C:\ruta\firebase-service-account.json"
+$env:FIREBASE_PROJECT_ID = "tu-proyecto-firebase"
+$env:JWT_SECRET_KEY = "una-clave-larga-y-secreta"
 uvicorn app.main:app --reload
 ```
 
-El esquema SQL de PostgreSQL debe estar creado previamente. La aplicación usa las tablas `stores`, `products`, `inventory`, `orders` y `order_items`.
+Como alternativa, el backend acepta el JSON de la cuenta de servicio en `FIREBASE_SERVICE_ACCOUNT_JSON`. No subas ese JSON al repositorio. Firestore crea las colecciones `stores`, `products`, `inventory`, `orders` y `metadata` automáticamente.
 
 ## 2. Abrir el panel de tienda
 
@@ -80,6 +82,11 @@ Durante las pruebas, la app usa `http://192.168.101.11:8001` para llegar al back
 ### Backend en producción
 Para que las apps empaquetadas funcionen fuera de tu computador, el backend necesita estar en un servidor accesible por internet (Render, Railway, un VPS, etc.), no en `localhost`. Ahí es donde cambias la URL de la API en ambos frontends.
 
+### Despliegue en Render
+El archivo `render.yaml` deja configurado el servicio `vent-fast` con el backend de FastAPI. En Render crea el servicio desde este repositorio y agrega la variable secreta `FIREBASE_SERVICE_ACCOUNT_JSON` con el contenido completo del JSON de la cuenta de servicio. Las variables `FIREBASE_PROJECT_ID`, `FIRESTORE_DATABASE_ID`, el comando de instalación y el comando de inicio ya están definidos.
+
+La URL actual usada por los frontends es `https://vent-fast.onrender.com`. Si Render asigna otra URL, actualízala en `panel-tienda/index.html` y `app-cliente/index.html`.
+
 ## Modelo de datos (resumen)
 
 | Tabla | Qué guarda |
@@ -87,7 +94,7 @@ Para que las apps empaquetadas funcionen fuera de tu computador, el backend nece
 | `stores` | Tiendas registradas (nombre, dirección, login) |
 | `products` | Catálogo global de productos |
 | `inventory` | Stock y precio de cada producto **por tienda** (aquí vive la independencia entre tiendas) |
-| `orders` / `order_items` | Pedidos hechos por clientes, ligados a una tienda específica |
+| `orders` (con `items`) | Pedidos hechos por clientes, ligados a una tienda específica |
 
 ## Endpoints principales de la API
 
@@ -95,9 +102,13 @@ Para que las apps empaquetadas funcionen fuera de tu computador, el backend nece
 |---|---|---|
 | POST | `/auth/register` | Registrar una tienda |
 | POST | `/auth/login` | Iniciar sesión (devuelve token) |
+| POST | `/auth/courier/register` | Registrar un domiciliario |
+| POST | `/auth/courier/login` | Iniciar sesión como domiciliario |
+| PATCH | `/couriers/me/availability?available=` | Activar o pausar disponibilidad |
 | GET | `/products?q=` | Buscar productos en el catálogo |
 | GET | `/products/{id}/availability` | En qué tiendas hay un producto, con precio y stock |
 | PUT | `/stores/me/inventory` | Agregar/actualizar stock y precio (requiere login) |
 | POST | `/orders` | Crear un pedido |
+| GET | `/orders/track/{id}?phone=` | Consultar estado y ubicación asociada a un pedido |
 | GET | `/orders/me` | Ver pedidos de tu tienda (requiere login) |
 | PATCH | `/orders/{id}/status` | Cambiar estado de un pedido (requiere login) |

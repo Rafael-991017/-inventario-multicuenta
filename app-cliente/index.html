@@ -23,6 +23,15 @@
   .search-bar{margin-top:16px;display:flex;gap:8px;}
   .search-bar input{flex:1;padding:14px 16px;border-radius:14px;border:none;font-size:14px;font-family:inherit;box-shadow:0 3px 12px rgba(0,0,0,.08);}
   .search-bar input:focus{outline:2px solid var(--amber);}
+  .discovery-tools{margin-top:14px;display:flex;gap:10px;align-items:center;overflow:hidden;}
+  .category-filters{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;flex:1;}
+  .category-filters::-webkit-scrollbar{display:none;}
+  .category-chip{flex:0 0 auto;padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:transparent;color:rgba(255,255,255,.72);font:500 12px 'Inter',sans-serif;cursor:pointer;}
+  .category-chip.active{background:var(--amber);border-color:var(--amber);color:var(--navy);font-weight:700;}
+  .sort-select{flex:0 0 auto;padding:8px 10px;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:var(--navy-light);color:#fff;font:500 12px 'Inter',sans-serif;}
+  .loading-state{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:10px;padding:54px 20px;color:var(--muted);font-size:13px;}
+  .loading-state::before{content:'';width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--amber-dark);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
   .container{max-width:760px;margin:0 auto;padding:16px;}
   .section-title{font-size:17px;color:var(--ink);margin:8px 4px 12px;font-weight:700;}
@@ -59,6 +68,23 @@
   .cart-bar .info{font-size:13px;}
   .cart-bar .total{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:16px;}
   .cart-bar button{background:var(--amber);border:none;color:var(--navy);padding:10px 16px;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;}
+  .header-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .header-action{flex:1;padding:10px 8px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font:600 12px 'Inter',sans-serif;cursor:pointer;}
+  .header-action:hover{background:rgba(255,255,255,.16);}
+  .cart-modal{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);z-index:70;align-items:flex-end;justify-content:center;}
+  .cart-panel{width:100%;max-width:560px;max-height:85vh;overflow:auto;background:var(--paper);padding:22px;border-radius:18px 18px 0 0;}
+  .cart-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .close-cart{border:0;background:var(--cream);color:var(--navy);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;}
+  .cart-line{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .cart-thumb{width:52px;height:52px;object-fit:cover;border-radius:8px;background:#edf1f5;flex:0 0 auto;}
+  .cart-line-info{flex:1;min-width:0;}.cart-line-name{font-weight:600;font-size:13px;}.cart-line-meta{color:var(--muted);font-size:11px;margin-top:3px;}
+  .cart-line-quantity{display:flex;align-items:center;gap:6px;}.cart-line-quantity button{width:26px;height:26px;border:1px solid var(--line);border-radius:50%;background:var(--cream);cursor:pointer;}.cart-line-quantity span{min-width:38px;text-align:center;font:600 12px 'IBM Plex Mono',monospace;}
+  .cart-total-row{display:flex;justify-content:space-between;padding:16px 0;font-weight:700;}.map-modal{display:none;position:fixed;inset:0;background:var(--cream);z-index:65;overflow:auto;}.map-header{background:var(--navy);color:#fff;padding:18px 16px;display:flex;align-items:center;gap:12px;}.map-frame{width:100%;height:270px;border:0;background:#e9eef4;}.store-map-card{background:var(--paper);padding:14px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:center;}.store-map-card h3{font-size:14px;}.store-map-card p{font-size:12px;color:var(--muted);margin:4px 0 0;}.map-link{color:var(--green);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;}
+  .tracking-status{padding:18px;background:var(--cream);border-radius:10px;margin:14px 0;}.tracking-status strong{display:block;font-size:18px;text-transform:capitalize;}.tracking-location{font-size:13px;color:var(--muted);line-height:1.5;}.tracking-actions{display:flex;gap:8px;}.tracking-actions button{flex:1;}
+  .tracking-modal-shell{position:relative;padding-top:42px;}.tracking-close{position:absolute;right:16px;top:16px;}
+  .checkout-modal-shell{position:relative;padding-top:42px;}.checkout-close{position:absolute;right:16px;top:16px;}
+  .form-error{display:none;color:var(--red);font-size:12px;line-height:1.4;margin:8px 0 0;}
+  @media(max-width:520px){.discovery-tools{align-items:stretch;flex-direction:column}.sort-select{width:100%;}.category-filters{flex:none;}}
   @media(max-width:380px){#results{gap:10px}.product-image{height:112px}.product-card{padding:8px}}
 
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);align-items:flex-end;justify-content:center;z-index:60;}
@@ -70,6 +96,7 @@
   .delivery-toggle{display:flex;gap:8px;margin-bottom:14px;}
   .delivery-toggle button{flex:1;padding:10px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);font-size:13px;cursor:pointer;font-weight:600;}
   .delivery-toggle button.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .delivery-toggle button:disabled{opacity:.45;cursor:not-allowed;}
   .cart-item-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);}
   .btn-confirm{width:100%;padding:13px;background:var(--amber);border:none;border-radius:8px;font-weight:700;font-size:14px;color:var(--navy);cursor:pointer;margin-top:10px;}
   .success-box{text-align:center;padding:30px 10px;}
@@ -83,6 +110,21 @@
   <h1>¿Qué estás buscando?</h1>
   <div class="search-bar">
     <input type="text" id="search-input" placeholder="Buscar producto..." oninput="onSearch(this.value)">
+  </div>
+  <div class="discovery-tools">
+    <div class="category-filters" id="category-filters" aria-label="Filtrar por categoría"></div>
+    <select class="sort-select" id="sort-select" onchange="changeSort(this.value)" aria-label="Ordenar productos">
+      <option value="price">Menor precio</option>
+      <option value="stores">Más tiendas</option>
+      <option value="name">Nombre A-Z</option>
+    </select>
+  </div>
+  <div class="header-actions">
+    <button class="header-action" onclick="window.location.href='perfiles.html'">Cambiar perfil</button>
+    <button class="header-action" onclick="openStoresMap()">Tiendas en el mapa</button>
+    <button class="header-action" onclick="openOrderHistory()">Mis pedidos</button>
+    <button class="header-action" onclick="window.location.href='domiciliario.html'">Acceso domiciliario</button>
+    <button class="header-action" id="track-header-button" onclick="openTracking()" style="display:none;">Seguir pedido</button>
   </div>
 </header>
 
@@ -107,11 +149,30 @@
     <div id="cart-count">0 productos</div>
     <div class="total" id="cart-total">$0</div>
   </div>
-  <button onclick="openCheckout()">Ver pedido</button>
+  <button onclick="openCart()">Ver carrito</button>
 </div>
 
 <div class="modal-overlay" id="checkout-modal">
-  <div class="modal" id="checkout-content"></div>
+  <div class="modal checkout-modal-shell"><button class="close-cart checkout-close" onclick="closeCheckout()" aria-label="Cerrar confirmar pedido">×</button><div id="checkout-content"></div></div>
+</div>
+
+<div class="cart-modal" id="cart-modal">
+  <div class="cart-panel">
+    <div class="cart-panel-header"><h3>Tu carrito</h3><button class="close-cart" onclick="closeCart()" aria-label="Cerrar carrito">×</button></div>
+    <div id="cart-lines"></div>
+    <div class="cart-total-row"><span>Total</span><span class="mono" id="cart-panel-total">$0</span></div>
+    <button class="btn-confirm" onclick="closeCart(); openCheckout();">Continuar al pedido</button>
+  </div>
+</div>
+
+<div class="map-modal" id="stores-map-modal">
+  <div class="map-header"><button class="back-btn" onclick="closeStoresMap()">←</button><div><strong>Tiendas disponibles</strong><div style="font-size:12px;opacity:.7;">Encuentra dónde comprar</div></div></div>
+  <iframe id="stores-map-frame" class="map-frame" title="Mapa de tiendas disponibles" loading="lazy"></iframe>
+  <div class="container"><div id="stores-map-list"></div></div>
+</div>
+
+<div class="modal-overlay" id="tracking-modal">
+  <div class="modal tracking-modal-shell"><button class="close-cart tracking-close" onclick="closeTracking()" aria-label="Cerrar mis pedidos">×</button><div id="tracking-content"></div></div>
 </div>
 
 <script>
@@ -120,20 +181,69 @@ const API_URL = window.Capacitor
   : 'https://vent-fast.onrender.com';
 let cart = [];
 let currentStoreForCart = null;
+let currentProductUnit = 'unidad';
+let currentProductImage = '';
+let lastOrder = null;
+const CART_STORAGE_KEY = 'inventario_cart';
+const STORE_STORAGE_KEY = 'inventario_cart_store';
+const LAST_ORDER_STORAGE_KEY = 'inventario_last_order';
+
+try{
+  cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
+  currentStoreForCart = JSON.parse(localStorage.getItem(STORE_STORAGE_KEY) || 'null');
+  lastOrder = JSON.parse(localStorage.getItem(LAST_ORDER_STORAGE_KEY) || 'null');
+}catch(_error){
+  cart = [];
+  currentStoreForCart = null;
+  lastOrder = null;
+}
+let searchTimer = null;
+let activeCategory = '';
+let sortMode = 'price';
+let productCards = [];
 
 async function onSearch(q){
-  if(q.length === 1){ return; }
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadProducts(q), q.length < 2 ? 0 : 260);
+}
+
+async function loadProducts(q){
   const endpoint = q.length < 2 ? '/products' : `/products?q=${encodeURIComponent(q)}`;
+  const box = document.getElementById('results');
+  box.innerHTML = '<div class="loading-state">Buscando productos...</div>';
   try{
     const res = await fetch(`${API_URL}${endpoint}`);
     if(!res.ok) throw new Error('No se pudo consultar el catálogo');
     const products = await res.json();
     document.getElementById('results-title').textContent = q.length < 2 ? 'Productos disponibles' : `Resultados para "${q}"`;
-    renderResults(products);
+    activeCategory = '';
+    productCards = [];
+    renderCategoryFilters(products);
+    await renderResults(products);
   }catch(error){
     document.getElementById('results-title').textContent = 'No se pudo conectar';
-    document.getElementById('results').innerHTML = `<div class="empty-state"><span class="eyebrow">API no disponible</span><p>Revisa que el servidor esté encendido y vuelve a intentarlo.</p></div>`;
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">API no disponible</span><p>Revisa tu conexión y vuelve a intentarlo.</p><button class="add-btn" onclick="loadProducts(document.getElementById('search-input').value)">Reintentar</button></div>`;
   }
+}
+
+function renderCategoryFilters(products){
+  const categories = [...new Set(products.map(product => product.category).filter(Boolean))].sort();
+  document.getElementById('category-filters').innerHTML = [
+    '<button class="category-chip active" onclick="setCategory(\'\', this)">Todos</button>',
+    ...categories.map(category => `<button class="category-chip" onclick="setCategory(decodeURIComponent('${encodeURIComponent(category)}'), this)">${category}</button>`)
+  ].join('');
+}
+
+function setCategory(category, button){
+  activeCategory = category;
+  document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('active'));
+  button.classList.add('active');
+  renderResults(productCards.map(card => card.product));
+}
+
+function changeSort(sort){
+  sortMode = sort;
+  renderResults(productCards.map(card => card.product));
 }
 
 async function renderResults(products){
@@ -142,13 +252,29 @@ async function renderResults(products){
     box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados</span><p>No encontramos ese producto en ninguna tienda.</p></div>`;
     return;
   }
-  const cards = await Promise.all(products.map(async p => {
-    const availRes = await fetch(`${API_URL}/products/${p.id}/availability`);
-    const avail = await availRes.json();
-    return {product: p, availability: avail};
-  }));
+  if(productCards.length === 0){
+    box.innerHTML = '<div class="loading-state">Comprobando disponibilidad...</div>';
+    productCards = await Promise.all(products.map(async p => {
+      const availRes = await fetch(`${API_URL}/products/${p.id}/availability`);
+      const avail = await availRes.json();
+      return {product: p, availability: avail};
+    }));
+  }
+  const visibleCards = productCards
+    .filter(card => !activeCategory || card.product.category === activeCategory)
+    .sort((a, b) => {
+      if(sortMode === 'name') return a.product.name.localeCompare(b.product.name);
+      if(sortMode === 'stores') return b.availability.length - a.availability.length;
+      const priceA = a.availability.length ? Math.min(...a.availability.map(store => store.price)) : Infinity;
+      const priceB = b.availability.length ? Math.min(...b.availability.map(store => store.price)) : Infinity;
+      return priceA - priceB;
+    });
+  if(visibleCards.length === 0){
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados</span><p>No hay productos en esta categoría.</p></div>`;
+    return;
+  }
 
-  box.innerHTML = cards.map(c => {
+  box.innerHTML = visibleCards.map(c => {
     if(c.availability.length === 0){
       return `<div class="product-card" style="opacity:.5;">
         <img class="product-image" src="${c.product.image_url || 'https://placehold.co/600x400/e9eef4/718096?text=Sin+imagen'}" alt="${c.product.name}">
@@ -174,7 +300,11 @@ async function openDetail(productId, name){
   document.getElementById('detail-overlay').style.display = 'block';
   const res = await fetch(`${API_URL}/products/${productId}/availability`);
   const stores = await res.json();
+  const productRes = await fetch(`${API_URL}/products/${productId}`);
+  const product = productRes.ok ? await productRes.json() : null;
   stores.sort((a,b) => a.price - b.price);
+  currentProductUnit = stores[0]?.unit || 'unidad';
+  currentProductImage = product?.image_url || '';
   document.getElementById('detail-stores').innerHTML = stores.map(s => `
     <div class="store-option">
       <div>
@@ -190,7 +320,7 @@ async function openDetail(productId, name){
           <input type="number" id="quantity-${s.store_id}" min="1" max="${s.stock}" value="1" aria-label="Cantidad">
           <button type="button" onclick="changeQuantity(${s.store_id}, 1, ${s.stock})">+</button>
         </div>
-        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock})">Agregar</button>
+        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '')}, ${Boolean(s.offers_delivery)})">Agregar</button>
       </div>
     </div>
   `).join('');
@@ -202,7 +332,7 @@ function changeQuantity(storeId, amount, max){
   input.value = Math.min(max, Math.max(1, parseInt(input.value || 1) + amount));
 }
 
-function addToCart(productId, name, storeId, storeName, price, quantity, stock){
+function addToCart(productId, name, storeId, storeName, price, quantity, stock, storeAddress, offersDelivery){
   quantity = parseInt(quantity, 10);
   if(!Number.isInteger(quantity) || quantity < 1){ alert('La cantidad debe ser mayor que cero'); return; }
   if(currentStoreForCart !== null && currentStoreForCart !== storeId){
@@ -215,25 +345,78 @@ function addToCart(productId, name, storeId, storeName, price, quantity, stock){
     alert(`Solo quedan ${stock - existing.quantity} unidades disponibles para agregar`); return;
   }
   if(existing){ existing.quantity += quantity; }
-  else{ cart.push({product_id: productId, name, quantity, price, store_id: storeId, store_name: storeName}); }
+  else{ cart.push({product_id: productId, name, quantity, price, stock, unit: currentProductUnit, image_url: currentProductImage, store_id: storeId, store_name: storeName, store_address: storeAddress, offers_delivery: offersDelivery}); }
   updateCartBar();
   closeDetail();
 }
 
 function updateCartBar(){
   const bar = document.getElementById('cart-bar');
-  if(cart.length === 0){ bar.style.display = 'none'; return; }
+  if(cart.length === 0){ bar.style.display = 'none'; persistCart(); return; }
   bar.style.display = 'flex';
   const count = cart.reduce((s,i) => s + i.quantity, 0);
   const total = cart.reduce((s,i) => s + i.quantity * i.price, 0);
   document.getElementById('cart-count').textContent = `${count} producto${count>1?'s':''} · ${cart[0].store_name}`;
   document.getElementById('cart-total').textContent = `$${total.toLocaleString('es-CO')}`;
+  renderCartLines();
+  persistCart();
+}
+
+function persistCart(){
+  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(currentStoreForCart));
+}
+
+function formatQuantity(value){
+  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 2});
+}
+
+function openCart(){
+  if(!cart.length) return;
+  renderCartLines();
+  document.getElementById('cart-modal').style.display = 'flex';
+}
+
+function closeCart(){ document.getElementById('cart-modal').style.display = 'none'; }
+
+function renderCartLines(){
+  const lines = document.getElementById('cart-lines');
+  if(!lines) return;
+  lines.innerHTML = cart.map((item, index) => `
+    <div class="cart-line">
+      <img class="cart-thumb" src="${item.image_url || 'https://placehold.co/120x120/e9eef4/718096?text=Producto'}" alt="${item.name}">
+      <div class="cart-line-info"><div class="cart-line-name">${item.name}</div><div class="cart-line-meta">$${item.price.toLocaleString('es-CO')} / ${item.unit || 'unidad'} · ${item.store_name}</div></div>
+      <div class="cart-line-quantity"><button onclick="changeCartQuantity(${index}, -1)">−</button><span>${formatQuantity(item.quantity)} ${item.unit || 'un.'}</span><button onclick="changeCartQuantity(${index}, 1)">+</button></div>
+      <button class="close-cart" onclick="removeCartItem(${index})" aria-label="Quitar ${item.name}">×</button>
+      <strong class="mono">$${(item.quantity * item.price).toLocaleString('es-CO')}</strong>
+    </div>`).join('');
+  const total = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  document.getElementById('cart-panel-total').textContent = `$${total.toLocaleString('es-CO')}`;
+}
+
+function changeCartQuantity(index, amount){
+  const item = cart[index];
+  const nextQuantity = item.quantity + (item.unit && item.unit !== 'unidad' ? amount * 0.5 : amount);
+  if(nextQuantity <= 0){ cart.splice(index, 1); }
+  else if(nextQuantity <= item.stock){ item.quantity = Number(nextQuantity.toFixed(2)); }
+  updateCartBar();
+  if(!cart.length) closeCart();
+}
+
+function removeCartItem(index){
+  cart.splice(index, 1);
+  if(!cart.length) currentStoreForCart = null;
+  updateCartBar();
+  if(!cart.length) closeCart();
 }
 
 function openCheckout(){
   const total = cart.reduce((s,i) => s + i.quantity * i.price, 0);
+  const selectedStore = cart[0] || {};
+  const offersDelivery = selectedStore.offers_delivery !== false;
   document.getElementById('checkout-content').innerHTML = `
     <h3>Confirmar pedido</h3>
+    <div class="tracking-location" style="margin:8px 0 14px;"><strong>${selectedStore.store_name || 'Tienda seleccionada'}</strong><br>${selectedStore.store_address || 'Dirección no registrada'}${offersDelivery ? '<br><span style="color:var(--green);">Ofrece domicilio</span>' : '<br><span style="color:var(--muted);">Solo recoge en tienda</span>'}</div>
     <div style="margin-bottom:14px;">
       ${cart.map(i => `<div class="cart-item-row"><span>${i.quantity}x ${i.name}</span><span class="mono">$${(i.quantity*i.price).toLocaleString('es-CO')}</span></div>`).join('')}
       <div class="cart-item-row" style="font-weight:700;border-bottom:none;"><span>Total</span><span class="mono">$${total.toLocaleString('es-CO')}</span></div>
@@ -241,14 +424,16 @@ function openCheckout(){
 
     <div class="delivery-toggle">
       <button id="btn-pickup" class="active" onclick="setDeliveryMode(false)">Recoger en tienda</button>
-      <button id="btn-delivery" onclick="setDeliveryMode(true)">A domicilio</button>
+      <button id="btn-delivery" onclick="setDeliveryMode(true)" ${offersDelivery ? '' : 'disabled'}>A domicilio</button>
     </div>
 
     <div class="field"><label>Tu nombre</label><input type="text" id="chk-name"></div>
     <div class="field"><label>Tu teléfono</label><input type="text" id="chk-phone"></div>
     <div class="field" id="address-field" style="display:none;"><label>Dirección de entrega</label><input type="text" id="chk-address"></div>
+    <div class="field"><label>Forma de pago</label><select id="chk-payment"><option value="contra_entrega">Pagar al recibir</option></select></div>
 
-    <button class="btn-confirm" onclick="submitOrder()">Confirmar pedido</button>
+    <p class="form-error" id="checkout-error"></p>
+    <button class="btn-confirm" id="confirm-order-button" onclick="submitOrder()">Confirmar pedido</button>
   `;
   document.getElementById('checkout-modal').style.display = 'flex';
 }
@@ -266,13 +451,22 @@ async function submitOrder(){
   const name = document.getElementById('chk-name').value.trim();
   const phone = document.getElementById('chk-phone').value.trim();
   const address = isDelivery ? document.getElementById('chk-address').value.trim() : null;
-  if(!name || !phone || (isDelivery && !address)){ alert('Completa todos los campos'); return; }
+  const errorBox = document.getElementById('checkout-error');
+  const button = document.getElementById('confirm-order-button');
+  const normalizedPhone = phone.replace(/[\s()-]/g, '');
+  if(name.length < 2){ showCheckoutError('Escribe tu nombre completo.'); return; }
+  if(!/^\+?\d{7,15}$/.test(normalizedPhone)){ showCheckoutError('Escribe un teléfono válido.'); return; }
+  if(isDelivery && address.length < 5){ showCheckoutError('Escribe una dirección de entrega válida.'); return; }
+  errorBox.style.display = 'none';
+  button.disabled = true;
+  button.textContent = 'Enviando pedido...';
 
   const body = {
     store_id: currentStoreForCart,
     customer_name: name,
     customer_phone: phone,
     delivery_address: address,
+    payment_method: document.getElementById('chk-payment').value,
     items: cart.map(i => ({product_id: i.product_id, quantity: i.quantity}))
   };
 
@@ -280,23 +474,140 @@ async function submitOrder(){
     const res = await fetch(`${API_URL}/orders`, {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
-    if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'No se pudo crear el pedido'); }
+    if(!res.ok){
+      const responseText = await res.text();
+      let message = 'No se pudo crear el pedido';
+      try{
+        const errorData = JSON.parse(responseText);
+        message = errorData.detail || message;
+      }catch(_error){
+        if(responseText.trim()) message = responseText.trim();
+      }
+      throw new Error(message);
+    }
     const order = await res.json();
+    lastOrder = {id: order.id, phone};
+    localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(lastOrder));
+    document.getElementById('track-header-button').style.display = 'block';
     document.getElementById('checkout-content').innerHTML = `
       <div class="success-box">
         <div class="check">✓</div>
         <h3>Pedido #${order.id} confirmado</h3>
         <p style="color:var(--muted);margin-top:8px;">${isDelivery ? 'Tu pedido va en camino a la dirección indicada.' : 'Puedes recogerlo en la tienda.'}</p>
-        <button class="btn-confirm" onclick="closeCheckout(); resetCart();">Listo</button>
+        <button class="btn-confirm" onclick="closeCheckout(); resetCart(); openTracking();">Seguir pedido</button>
       </div>`;
-  }catch(e){ alert(e.message); }
+  }catch(e){
+    button.disabled = false;
+    button.textContent = 'Confirmar pedido';
+    alert(`No se pudo enviar el pedido: ${e.message || 'comprueba tu conexión e inténtalo de nuevo'}`);
+  }
 }
+
+function showCheckoutError(message){
+  const errorBox = document.getElementById('checkout-error');
+  errorBox.textContent = message;
+  errorBox.style.display = 'block';
+}
+
+let trackingTimer = null;
+
+async function openTracking(){
+  if(!lastOrder){
+    document.getElementById('tracking-content').innerHTML = '<h3>Seguir pedido</h3><p class="tracking-location">Cuando confirmes un pedido podrás consultar aquí su estado.</p>';
+  } else {
+    await renderTracking();
+  }
+  document.getElementById('tracking-modal').style.display = 'flex';
+}
+
+async function renderTracking(){
+  const box = document.getElementById('tracking-content');
+  box.innerHTML = '<h3>Seguimiento del pedido</h3><p class="tracking-location">Consultando estado...</p>';
+  try{
+    const res = await fetch(`${API_URL}/orders/track/${lastOrder.id}?phone=${encodeURIComponent(lastOrder.phone)}`);
+    if(!res.ok) throw new Error('No se pudo consultar el pedido');
+    const data = await res.json();
+    const location = data.delivery_address ? `Entrega en: ${data.delivery_address}` : `Recogida en: ${data.store_name || 'la tienda'}`;
+    const courierIsMoving = data.courier_latitude && data.courier_longitude;
+    const mapQuery = courierIsMoving ? `${data.courier_latitude},${data.courier_longitude}` : (data.store_latitude && data.store_longitude ? `${data.store_latitude},${data.store_longitude}` : (data.store_address || 'tiendas cercanas'));
+    box.innerHTML = `<h3>Pedido #${data.id}</h3>
+      <div class="tracking-status"><strong>${data.status.replace('_', ' ')}</strong><span class="tracking-location">${location}</span></div>
+      <p class="tracking-location">${data.store_name || ''}${data.store_address ? ` · ${data.store_address}` : ''}${courierIsMoving ? '<br><span style="color:var(--green);">El domiciliario está compartiendo su ubicación</span>' : ''}</p>
+      <div class="tracking-actions"><button class="btn secondary" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}','_blank')">Ver ubicación</button><button class="btn-confirm" onclick="renderTracking()">Actualizar</button></div>`;
+  }catch(error){
+    box.innerHTML = `<h3>Seguimiento del pedido</h3><p class="tracking-location">${error.message}</p><button class="btn-confirm" onclick="renderTracking()">Reintentar</button>`;
+  }
+}
+
+async function openStoresMap(){
+  document.getElementById('stores-map-modal').style.display = 'block';
+  const list = document.getElementById('stores-map-list');
+  list.innerHTML = '<div class="loading-state">Buscando tiendas...</div>';
+  try{
+    const res = await fetch(`${API_URL}/stores`);
+    if(!res.ok) throw new Error('No se pudieron cargar las tiendas');
+    const stores = await res.json();
+    if(!stores.length){ list.innerHTML = '<div class="empty-state"><p>No hay tiendas registradas todavía.</p></div>'; return; }
+    const first = stores.find(store => store.latitude && store.longitude) || stores[0];
+    const firstAddress = [first.address, first.neighborhood, first.municipality, first.department].filter(Boolean).join(', ');
+    const query = first.latitude && first.longitude ? `${first.latitude},${first.longitude}` : (firstAddress || 'tiendas');
+    document.getElementById('stores-map-frame').src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+    list.innerHTML = stores.map(store => {
+      const fullAddress = [store.address, store.neighborhood, store.municipality, store.department].filter(Boolean).join(', ');
+      const storeQuery = store.latitude && store.longitude ? `${store.latitude},${store.longitude}` : (fullAddress || store.name);
+      return `<div class="store-map-card"><div><h3>${store.name}</h3><p>${fullAddress || 'Dirección no registrada'}${store.phone ? `<br>Contacto: ${store.phone}` : ''}</p></div><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeQuery)}" target="_blank" rel="noopener">Abrir mapa</a></div>`;
+    }).join('');
+  }catch(error){ list.innerHTML = `<div class="empty-state"><p>${error.message}</p></div>`; }
+}
+
+function closeStoresMap(){ document.getElementById('stores-map-modal').style.display = 'none'; }
+
+async function openOrderHistory(){
+  const box = document.getElementById('tracking-content');
+  if(!lastOrder){
+    box.innerHTML = `<h3>Mis pedidos</h3><p class="tracking-location">Escribe el teléfono usado al confirmar el pedido.</p><div class="field"><label>Teléfono</label><input type="tel" id="history-phone" placeholder="300 000 0000"></div><button class="btn-confirm" onclick="loadOrderHistory(document.getElementById('history-phone').value)">Consultar pedidos</button>`;
+    document.getElementById('tracking-modal').style.display = 'flex';
+    return;
+  }
+  loadOrderHistory(lastOrder.phone);
+}
+
+async function loadOrderHistory(phone){
+  phone = phone.trim();
+  if(!phone) return;
+  const box = document.getElementById('tracking-content');
+  box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">Cargando historial...</p>';
+  document.getElementById('tracking-modal').style.display = 'flex';
+  try{
+    const res = await fetch(`${API_URL}/orders/history?phone=${encodeURIComponent(phone.trim())}`);
+    if(!res.ok) throw new Error('No se pudo cargar el historial');
+    const orders = await res.json();
+    if(!orders.length){
+      box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">No encontramos pedidos con ese teléfono.</p><button class="btn-confirm" onclick="closeTracking()">Cerrar</button>';
+      return;
+    }
+    box.innerHTML = `<h3>Mis pedidos</h3>${orders.map(order => `<button class="store-map-card" style="width:100%;text-align:left;border:0;cursor:pointer;" onclick="selectHistoricalOrder(${order.id}, '${phone.replace(/'/g, "\\'")}')"><div><h3>Pedido #${order.id}</h3><p>${order.store_name} · ${order.status.replace('_', ' ')}</p></div><strong class="mono">$${Number(order.total).toLocaleString('es-CO')}</strong></button>`).join('')}`;
+  }catch(error){
+    box.innerHTML = `<h3>Mis pedidos</h3><p class="tracking-location">${error.message}</p><button class="btn-confirm" onclick="openOrderHistory()">Reintentar</button>`;
+  }
+}
+
+function selectHistoricalOrder(orderId, phone){
+  lastOrder = {id: orderId, phone};
+  localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(lastOrder));
+  document.getElementById('track-header-button').style.display = 'block';
+  renderTracking();
+}
+
+function closeTracking(){ document.getElementById('tracking-modal').style.display = 'none'; }
 
 function resetCart(){
   cart = []; currentStoreForCart = null;
   updateCartBar();
 }
 
+updateCartBar();
+if(lastOrder) document.getElementById('track-header-button').style.display = 'block';
 onSearch('');
 </script>
 </body>
