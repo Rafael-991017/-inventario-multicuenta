@@ -177,8 +177,8 @@
 
 <script>
 const API_URL = window.Capacitor
-  ? 'https://vent-fast.onrender.com'
-  : 'https://vent-fast.onrender.com';
+  ? 'https://vent-fast-yxui.onrender.com'
+  : 'https://vent-fast-yxui.onrender.com';
 let cart = [];
 let currentStoreForCart = null;
 let currentProductUnit = 'unidad';
@@ -204,18 +204,20 @@ let productCards = [];
 
 async function onSearch(q){
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => loadProducts(q), q.length < 2 ? 0 : 260);
+  const normalizedQuery = q.trim();
+  searchTimer = setTimeout(() => loadProducts(normalizedQuery), normalizedQuery.length < 2 ? 0 : 260);
 }
 
 async function loadProducts(q){
-  const endpoint = q.length < 2 ? '/products' : `/products?q=${encodeURIComponent(q)}`;
+  const normalizedQuery = q.trim();
+  const endpoint = normalizedQuery.length < 2 ? '/products' : `/products?q=${encodeURIComponent(normalizedQuery)}`;
   const box = document.getElementById('results');
   box.innerHTML = '<div class="loading-state">Buscando productos...</div>';
   try{
     const res = await fetch(`${API_URL}${endpoint}`);
     if(!res.ok) throw new Error('No se pudo consultar el catálogo');
     const products = await res.json();
-    document.getElementById('results-title').textContent = q.length < 2 ? 'Productos disponibles' : `Resultados para "${q}"`;
+    document.getElementById('results-title').textContent = normalizedQuery.length < 2 ? 'Productos disponibles' : `Resultados para "${normalizedQuery}"`;
     activeCategory = '';
     productCards = [];
     renderCategoryFilters(products);
@@ -255,8 +257,11 @@ async function renderResults(products){
   if(productCards.length === 0){
     box.innerHTML = '<div class="loading-state">Comprobando disponibilidad...</div>';
     productCards = await Promise.all(products.map(async p => {
-      const availRes = await fetch(`${API_URL}/products/${p.id}/availability`);
-      const avail = await availRes.json();
+      let avail = [];
+      try{
+        const availRes = await fetch(`${API_URL}/products/${p.id}/availability`);
+        if(availRes.ok) avail = await availRes.json();
+      }catch(_error){}
       return {product: p, availability: avail};
     }));
   }

@@ -33,6 +33,37 @@ def get_product(product_id: int, db=Depends(get_db)):
     return product
 
 
+@router.delete("/{product_id}")
+def delete_product(
+    product_id: int,
+    current_store: dict = Depends(auth.get_current_store),
+    db=Depends(get_db),
+):
+    """Quita el producto de esta tienda y borra el catálogo si ya no se usa."""
+    product_reference = collection("products").document(str(product_id))
+    if not product_reference.get().exists:
+        raise HTTPException(404, "Producto no encontrado")
+
+    inventory_items = [
+        item for item in list_collection("inventory")
+        if item.get("product_id") == product_id
+    ]
+    store_item = next(
+        (item for item in inventory_items if item.get("store_id") == current_store["id"]),
+        None,
+    )
+    if store_item is None:
+        raise HTTPException(404, "Ese producto no está en tu inventario")
+
+    collection("inventory").document(str(store_item["id"])).delete()
+    remaining_items = [item for item in inventory_items if item["id"] != store_item["id"]]
+    catalog_deleted = not remaining_items
+    if catalog_deleted:
+        product_reference.delete()
+
+    return {"catalog_deleted": catalog_deleted}
+
+
 @router.patch("/{product_id}/image", response_model=schemas.ProductOut)
 def update_product_image(
     product_id: int,

@@ -542,8 +542,20 @@ async function registerSale(){
 
 async function deleteInventoryItem(productId){
   if(!confirm('¿Quitar este producto de tu inventario?')) return;
-  await authFetch(`/stores/me/inventory/${productId}`, {method:'DELETE'});
-  loadInventory();
+  const response = await authFetch(`/products/${productId}`, {method:'DELETE'});
+  if(!response.ok){
+    let message = 'No se pudo eliminar el producto.';
+    try { message = (await response.json()).detail || message; } catch {}
+    alert(message);
+    return;
+  }
+  const result = await response.json();
+  await loadInventory();
+  if(result.catalog_deleted){
+    alert('Producto eliminado del inventario y del catálogo.');
+  } else {
+    alert('Producto quitado de tu inventario. Se conserva en el catálogo porque otra tienda lo usa.');
+  }
 }
 
 function openInventoryModal(){
