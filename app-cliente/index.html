@@ -325,7 +325,7 @@ async function openDetail(productId, name){
           <input type="number" id="quantity-${s.store_id}" min="1" max="${s.stock}" value="1" aria-label="Cantidad">
           <button type="button" onclick="changeQuantity(${s.store_id}, 1, ${s.stock})">+</button>
         </div>
-        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '')}, ${Boolean(s.offers_delivery)})">Agregar</button>
+        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '').replace(/"/g, '&quot;')}, ${Boolean(s.offers_delivery)})">Agregar</button>
       </div>
     </div>
   `).join('');
