@@ -15,6 +15,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 día
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/customer/login", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -73,3 +74,39 @@ def get_current_courier(
     if courier is None:
         raise credentials_exception
     return courier
+
+
+def get_current_customer(
+    token: str = Depends(oauth2_scheme), db=Depends(get_db)
+) -> dict:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar la sesión del cliente",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        customer_id = payload.get("sub")
+        if customer_id is None or payload.get("role") != "customer":
+            raise credentials_exception
+    except (JWTError, ValueError):
+        raise credentials_exception
+    customer = find_by_field("customers", "id", int(customer_id))
+    if customer is None:
+        raise credentials_exception
+    return customer
+
+
+def get_optional_customer(
+    token: Optional[str] = Depends(optional_oauth2_scheme), db=Depends(get_db)
+) -> Optional[dict]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        customer_id = payload.get("sub")
+        if customer_id is None or payload.get("role") != "customer":
+            return None
+        return find_by_field("customers", "id", int(customer_id))
+    except (JWTError, ValueError):
+        return None

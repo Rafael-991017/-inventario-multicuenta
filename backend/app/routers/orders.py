@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -10,7 +10,11 @@ router = APIRouter(prefix="/orders", tags=["Pedidos"])
 
 
 @router.post("", status_code=201)
-def create_order(order_in: schemas.OrderCreate, db=Depends(get_db)):
+def create_order(
+    order_in: schemas.OrderCreate,
+    current_customer: Optional[dict] = Depends(auth.get_optional_customer),
+    db=Depends(get_db),
+):
     store = find_by_field("stores", "id", order_in.store_id)
     if not store:
         raise HTTPException(404, "Tienda no encontrada")
@@ -41,7 +45,15 @@ def create_order(order_in: schemas.OrderCreate, db=Depends(get_db)):
     assigned_courier = None
     if order_in.delivery_address:
         assigned_courier = next((courier for courier in list_collection("couriers") if courier.get("available")), None)
+    customer_id = current_customer["id"] if current_customer else order_in.customer_id
+    customer_email = (
+        current_customer["email"]
+        if current_customer
+        else (str(order_in.customer_email).strip().lower() if order_in.customer_email else None)
+    )
     order = {"id": next_id("orders"), "store_id": order_in.store_id,
+             "customer_id": customer_id,
+             "customer_email": customer_email,
              "customer_name": order_in.customer_name, "customer_phone": order_in.customer_phone,
              "delivery_address": order_in.delivery_address,
              "payment_method": order_in.payment_method,
@@ -60,11 +72,54 @@ def list_my_orders(current_store: dict = Depends(auth.get_current_store), db=Dep
     return sorted(orders, key=lambda order: order.get("created_at", datetime.min), reverse=True)
 
 
+@router.get("/customer/me")
+def list_my_customer_orders(
+    current_customer: dict = Depends(auth.get_current_customer),
+    db=Depends(get_db),
+):
+    stores = {store["id"]: store for store in list_collection("stores")}
+    customer_email = (current_customer.get("email") or "").strip().lower()
+    orders = []
+    for order in list_collection("orders"):
+        matches_id = order.get("customer_id") == current_customer["id"]
+        matches_email = bool(customer_email and (order.get("customer_email") or "").strip().lower() == customer_email)
+        if not (matches_id or matches_email):
+            continue
+        store = stores.get(order.get("store_id"))
+        orders.append({
+            "id": order["id"],
+            "status": order.get("status", "pendiente"),
+            "total": order.get("total", 0),
+            "created_at": order.get("created_at"),
+            "store_name": store.get("name") if store else "Tienda",
+            "customer_phone": order.get("customer_phone"),
+        })
+    return sorted(orders, key=lambda order: order.get("created_at") or datetime.min, reverse=True)
+
+
 @router.get("/track/{order_id}")
-def track_order(order_id: int, phone: str, db=Depends(get_db)):
-    """Consulta pública protegida por el teléfono usado al crear el pedido."""
+def track_order(
+    order_id: int,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
+    current_customer: Optional[dict] = Depends(auth.get_optional_customer),
+    db=Depends(get_db),
+):
+    """Consulta de pedido verificada por cuenta del cliente, correo o teléfono."""
     order = find_by_field("orders", "id", order_id)
-    if not order or order.get("customer_phone") != phone:
+    if not order:
+        raise HTTPException(404, "No encontramos un pedido con esos datos")
+    authorized = False
+    if current_customer and (
+        order.get("customer_id") == current_customer["id"]
+        or (order.get("customer_email") or "").lower() == (current_customer.get("email") or "").lower()
+    ):
+        authorized = True
+    elif email and (order.get("customer_email") or "").lower() == email.strip().lower():
+        authorized = True
+    elif phone and order.get("customer_phone") == phone:
+        authorized = True
+    if not authorized:
         raise HTTPException(404, "No encontramos un pedido con esos datos")
     store = find_by_field("stores", "id", order.get("store_id"))
     courier = find_by_field("couriers", "id", order.get("courier_id")) if order.get("courier_id") else None
@@ -83,12 +138,23 @@ def track_order(order_id: int, phone: str, db=Depends(get_db)):
 
 
 @router.get("/history")
-def order_history(phone: str, db=Depends(get_db)):
-    """Devuelve el historial básico de pedidos asociados a un teléfono."""
+def order_history(
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
+    db=Depends(get_db),
+):
+    """Devuelve el historial básico de pedidos asociados a un correo o teléfono."""
     stores = {store["id"]: store for store in list_collection("stores")}
+    normalized_email = email.strip().lower() if email else None
     orders = []
     for order in list_collection("orders"):
-        if order.get("customer_phone") != phone:
+        if normalized_email:
+            if (order.get("customer_email") or "").strip().lower() != normalized_email:
+                continue
+        elif phone:
+            if order.get("customer_phone") != phone:
+                continue
+        else:
             continue
         store = stores.get(order.get("store_id"))
         orders.append({
@@ -97,6 +163,7 @@ def order_history(phone: str, db=Depends(get_db)):
             "total": order.get("total", 0),
             "created_at": order.get("created_at"),
             "store_name": store.get("name") if store else "Tienda",
+            "customer_phone": order.get("customer_phone"),
         })
     return sorted(orders, key=lambda order: order.get("created_at") or datetime.min, reverse=True)
 

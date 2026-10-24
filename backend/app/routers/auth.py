@@ -66,3 +66,35 @@ def login_courier(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(g
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
     token = auth.create_access_token({"sub": str(courier["id"]), "role": "courier"})
     return {"access_token": token, "courier": courier}
+
+
+@router.post("/customer/register", response_model=schemas.CustomerOut, status_code=201)
+def register_customer(customer_in: schemas.CustomerCreate, db=Depends(get_db)):
+    normalized_email = str(customer_in.email).strip().lower()
+    if find_by_field("customers", "email", normalized_email):
+        raise HTTPException(400, "Ya existe un cliente registrado con ese correo")
+    customer = {
+        "id": next_id("customers"),
+        "name": customer_in.name.strip(),
+        "email": normalized_email,
+        "hashed_password": auth.hash_password(customer_in.password),
+        "phone": customer_in.phone.strip(),
+        "address": customer_in.address.strip() if customer_in.address else None,
+    }
+    collection("customers").document(str(customer["id"])).set(customer)
+    return customer
+
+
+@router.post("/customer/login", response_model=schemas.CustomerToken)
+def login_customer(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
+    normalized_email = form_data.username.strip().lower()
+    customer = find_by_field("customers", "email", normalized_email) or find_by_field("customers", "email", form_data.username.strip())
+    if not customer or not auth.verify_password(form_data.password, customer["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+    token = auth.create_access_token({"sub": str(customer["id"]), "role": "customer"})
+    return {"access_token": token, "customer": customer}
+
+
+@router.get("/customer/me", response_model=schemas.CustomerOut)
+def get_my_customer(current_customer: dict = Depends(auth.get_current_customer)):
+    return current_customer

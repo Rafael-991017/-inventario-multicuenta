@@ -84,6 +84,29 @@ class CourierToken(BaseModel):
     courier: CourierOut
 
 
+# ---------- Customer ----------
+class CustomerCreate(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    phone: str
+    address: Optional[str] = None
+
+
+class CustomerOut(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    phone: str
+    address: Optional[str] = None
+
+
+class CustomerToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    customer: CustomerOut
+
+
 # ---------- Product ----------
 class ProductCreate(BaseModel):
     name: str
@@ -158,6 +181,8 @@ class OrderItemCreate(BaseModel):
 
 class OrderCreate(BaseModel):
     store_id: int
+    customer_id: Optional[int] = None
+    customer_email: Optional[EmailStr] = None
     customer_name: str
     customer_phone: str
     delivery_address: Optional[str] = None  # None = recoge en tienda
@@ -178,6 +203,8 @@ class OrderItemOut(BaseModel):
 class OrderOut(BaseModel):
     id: int
     store_id: int
+    customer_id: Optional[int] = None
+    customer_email: Optional[str] = None
     customer_name: str
     customer_phone: str
     delivery_address: Optional[str]
