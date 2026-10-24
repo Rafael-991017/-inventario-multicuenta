@@ -34,7 +34,7 @@
   <main class="content"><div class="status-card"><div><div class="status-label">Estado de disponibilidad</div><div class="status-text"><span class="status-dot" id="status-dot"></span><span id="status-text">No disponible</span></div></div><label class="switch"><input type="checkbox" id="availability-toggle" onchange="toggleAvailability(this.checked)"><span class="slider"></span></label></div><div class="info-card"><h2>Mi perfil</h2><div class="info-row"><span>Teléfono</span><strong id="courier-phone">—</strong></div><div class="info-row"><span>Vehículo</span><strong id="courier-vehicle">—</strong></div></div><div class="info-card"><h2>Entregas disponibles</h2><p class="muted">Acepta un pedido para comenzar la entrega.</p><div id="delivery-list"><p class="muted">Cargando entregas...</p></div></div></main>
 </section>
 <script>
-const API_URL = 'https://vent-fast.onrender.com';
+const API_URL = 'https://vent-fast-yxui.onrender.com';
 let isRegister = false;
 let token = localStorage.getItem('courier_token');
 let courier = JSON.parse(localStorage.getItem('courier_profile') || 'null');

@@ -101,13 +101,55 @@
   .btn-confirm{width:100%;padding:13px;background:var(--amber);border:none;border-radius:8px;font-weight:700;font-size:14px;color:var(--navy);cursor:pointer;margin-top:10px;}
   .success-box{text-align:center;padding:30px 10px;}
   .success-box .check{font-size:40px;margin-bottom:10px;}
+
+  .auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--navy);}
+  .auth-card{width:min(420px,100%);background:var(--paper);padding:30px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.28);}
+  .auth-card .eyebrow{display:block;color:#B87822;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+  .auth-card h1{font-size:24px;color:var(--ink);}
+  .auth-card .muted{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 18px;}
+  .auth-card .primary,.auth-card .secondary{width:100%;padding:12px;border:0;border-radius:7px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:14px;}
+  .auth-card .primary{background:var(--amber);color:var(--navy);}
+  .auth-card .secondary{margin-top:10px;background:transparent;color:var(--navy);border:1px solid var(--line);}
+  .auth-card .error{color:var(--red);font-size:13px;margin-top:12px;min-height:18px;}
+  .auth-card .toggle{text-align:center;color:var(--muted);font-size:13px;margin-top:18px;}
+  .auth-card .toggle button{border:0;background:none;color:var(--green);font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
+  #client-app{display:none;}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .user-pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:6px 12px;font-size:12px;color:#fff;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 </head>
 <body>
 
+<section class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <span class="eyebrow">Acceso de cliente</span>
+    <h1 id="auth-title">Inicia sesión</h1>
+    <p class="muted" id="auth-subtitle">Ingresa con tu correo para buscar productos, hacer pedidos y guardar tu historial en tu propia cuenta.</p>
+    <div id="auth-form">
+      <div class="field"><label>Correo</label><input id="auth-email" type="email" placeholder="cliente@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input id="auth-password" type="password" placeholder="••••••••"></div>
+      <div id="register-fields" style="display:none">
+        <div class="field"><label>Nombre completo</label><input id="auth-name" type="text" placeholder="Tu nombre completo"></div>
+        <div class="field"><label>Teléfono</label><input id="auth-phone" type="tel" placeholder="300 000 0000"></div>
+        <div class="field"><label>Dirección habitual (opcional)</label><input id="auth-address" type="text" placeholder="Calle 10 # 20-30"></div>
+      </div>
+      <button class="primary" id="auth-submit" onclick="submitCustomerAuth()">Entrar</button>
+      <button class="secondary" onclick="window.location.href='perfiles.html'">Cambiar perfil</button>
+      <p class="error" id="auth-error"></p>
+      <div class="toggle"><span id="toggle-label">¿Aún no tienes cuenta?</span> <button type="button" onclick="toggleCustomerAuth()" id="toggle-button">Regístrate</button></div>
+    </div>
+  </div>
+</section>
+
+<div id="client-app">
 <header>
-  <span class="eyebrow">Disponibilidad en tiendas cercanas</span>
-  <h1>¿Qué estás buscando?</h1>
+  <div class="header-top">
+    <div>
+      <span class="eyebrow">Disponibilidad en tiendas cercanas</span>
+      <h1>¿Qué estás buscando?</h1>
+    </div>
+    <div class="user-pill" id="customer-badge" title="Cuenta activa">Cliente</div>
+  </div>
   <div class="search-bar">
     <input type="text" id="search-input" placeholder="Buscar producto..." oninput="onSearch(this.value)">
   </div>
@@ -123,8 +165,8 @@
     <button class="header-action" onclick="window.location.href='perfiles.html'">Cambiar perfil</button>
     <button class="header-action" onclick="openStoresMap()">Tiendas en el mapa</button>
     <button class="header-action" onclick="openOrderHistory()">Mis pedidos</button>
-    <button class="header-action" onclick="window.location.href='domiciliario.html'">Acceso domiciliario</button>
     <button class="header-action" id="track-header-button" onclick="openTracking()" style="display:none;">Seguir pedido</button>
+    <button class="header-action" onclick="logoutCustomer()">Cerrar sesión</button>
   </div>
 </header>
 
@@ -174,28 +216,212 @@
 <div class="modal-overlay" id="tracking-modal">
   <div class="modal tracking-modal-shell"><button class="close-cart tracking-close" onclick="closeTracking()" aria-label="Cerrar mis pedidos">×</button><div id="tracking-content"></div></div>
 </div>
+</div>
 
 <script>
 const API_URL = window.Capacitor
   ? 'https://vent-fast-yxui.onrender.com'
   : 'https://vent-fast-yxui.onrender.com';
+let isCustomerRegister = false;
+let customerToken = localStorage.getItem('customer_token');
+let customerProfile = null;
+try{
+  customerProfile = JSON.parse(localStorage.getItem('customer_profile') || 'null');
+}catch(_e){
+  customerProfile = null;
+}
+const LOCAL_CUSTOMERS_KEY = 'inventario_customer_accounts';
+
 let cart = [];
 let currentStoreForCart = null;
 let currentProductUnit = 'unidad';
 let currentProductImage = '';
 let lastOrder = null;
-const CART_STORAGE_KEY = 'inventario_cart';
-const STORE_STORAGE_KEY = 'inventario_cart_store';
-const LAST_ORDER_STORAGE_KEY = 'inventario_last_order';
 
-try{
-  cart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '[]');
-  currentStoreForCart = JSON.parse(localStorage.getItem(STORE_STORAGE_KEY) || 'null');
-  lastOrder = JSON.parse(localStorage.getItem(LAST_ORDER_STORAGE_KEY) || 'null');
-}catch(_error){
+function customerKeySuffix(){
+  const email = (customerProfile && customerProfile.email ? customerProfile.email : 'anon').toLowerCase().trim();
+  return email;
+}
+function getCartStorageKey(){ return `inventario_cart_${customerKeySuffix()}`; }
+function getStoreStorageKey(){ return `inventario_cart_store_${customerKeySuffix()}`; }
+function getLastOrderStorageKey(){ return `inventario_last_order_${customerKeySuffix()}`; }
+function getOrdersListStorageKey(){ return `inventario_orders_${customerKeySuffix()}`; }
+
+function loadCustomerSessionData(){
+  try{
+    cart = JSON.parse(localStorage.getItem(getCartStorageKey()) || '[]');
+    currentStoreForCart = JSON.parse(localStorage.getItem(getStoreStorageKey()) || 'null');
+    lastOrder = JSON.parse(localStorage.getItem(getLastOrderStorageKey()) || 'null');
+  }catch(_error){
+    cart = [];
+    currentStoreForCart = null;
+    lastOrder = null;
+  }
+}
+
+function toggleCustomerAuth(){
+  isCustomerRegister = !isCustomerRegister;
+  document.getElementById('auth-title').textContent = isCustomerRegister ? 'Crea tu cuenta' : 'Inicia sesión';
+  document.getElementById('register-fields').style.display = isCustomerRegister ? 'block' : 'none';
+  document.getElementById('auth-submit').textContent = isCustomerRegister ? 'Crear cuenta' : 'Entrar';
+  document.getElementById('toggle-label').textContent = isCustomerRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?';
+  document.getElementById('toggle-button').textContent = isCustomerRegister ? 'Inicia sesión' : 'Regístrate';
+  document.getElementById('auth-error').textContent = '';
+}
+
+function getLocalCustomers(){
+  try{
+    return JSON.parse(localStorage.getItem(LOCAL_CUSTOMERS_KEY) || '[]');
+  }catch(_e){
+    return [];
+  }
+}
+function saveLocalCustomers(list){
+  localStorage.setItem(LOCAL_CUSTOMERS_KEY, JSON.stringify(list));
+}
+
+async function submitCustomerAuth(){
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
+  const password = document.getElementById('auth-password').value;
+  const errorBox = document.getElementById('auth-error');
+  const submitBtn = document.getElementById('auth-submit');
+  errorBox.textContent = '';
+
+  if(!email || !email.includes('@')){
+    errorBox.textContent = 'Ingresa un correo electrónico válido.';
+    return;
+  }
+  if(!password || password.length < 4){
+    errorBox.textContent = 'La contraseña debe tener al menos 4 caracteres.';
+    return;
+  }
+
+  let name = '';
+  let phone = '';
+  let address = '';
+  if(isCustomerRegister){
+    name = document.getElementById('auth-name').value.trim();
+    phone = document.getElementById('auth-phone').value.trim();
+    address = document.getElementById('auth-address').value.trim();
+    const normalizedPhone = phone.replace(/[\s()-]/g, '');
+    if(name.length < 2){
+      errorBox.textContent = 'Escribe tu nombre completo.';
+      return;
+    }
+    if(!/^\+?\d{7,15}$/.test(normalizedPhone)){
+      errorBox.textContent = 'Escribe un teléfono válido.';
+      return;
+    }
+  }
+
+  submitBtn.disabled = true;
+  try{
+    let usedLocalFallback = false;
+    if(isCustomerRegister){
+      const regRes = await fetch(`${API_URL}/auth/customer/register`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name, email, password, phone, address: address || null})
+      });
+      if(regRes.status === 404){
+        usedLocalFallback = true;
+        const accounts = getLocalCustomers();
+        if(accounts.some(acc => acc.email === email)){
+          throw new Error('Ya existe un cliente registrado con ese correo');
+        }
+        const newCustomer = {
+          id: Date.now(),
+          name,
+          email,
+          password,
+          phone,
+          address: address || null
+        };
+        accounts.push(newCustomer);
+        saveLocalCustomers(accounts);
+      } else if(!regRes.ok){
+        const err = await regRes.json().catch(() => ({}));
+        throw new Error(err.detail || 'No se pudo crear la cuenta de cliente');
+      } else {
+        const created = await regRes.json();
+        const accounts = getLocalCustomers().filter(acc => acc.email !== email);
+        accounts.push({...created, password});
+        saveLocalCustomers(accounts);
+      }
+    }
+
+    if(!usedLocalFallback){
+      const loginRes = await fetch(`${API_URL}/auth/customer/login`, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:`username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+      });
+      if(loginRes.status === 404){
+        usedLocalFallback = true;
+      } else if(!loginRes.ok){
+        const err = await loginRes.json().catch(() => ({}));
+        throw new Error(err.detail || 'Correo o contraseña incorrectos');
+      } else {
+        const data = await loginRes.json();
+        customerToken = data.access_token;
+        customerProfile = data.customer;
+      }
+    }
+
+    if(usedLocalFallback){
+      const accounts = getLocalCustomers();
+      const matched = accounts.find(acc => acc.email === email && acc.password === password);
+      if(!matched){
+        throw new Error('Correo o contraseña incorrectos');
+      }
+      customerToken = `local-token-${matched.id}`;
+      customerProfile = {
+        id: matched.id,
+        name: matched.name,
+        email: matched.email,
+        phone: matched.phone,
+        address: matched.address || null
+      };
+    }
+
+    localStorage.setItem('customer_token', customerToken);
+    localStorage.setItem('customer_profile', JSON.stringify(customerProfile));
+    enterCustomerApp();
+  }catch(err){
+    errorBox.textContent = err.message || 'No se pudo iniciar sesión';
+  }finally{
+    submitBtn.disabled = false;
+  }
+}
+
+function enterCustomerApp(){
+  if(!customerProfile) return;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('client-app').style.display = 'block';
+  document.getElementById('customer-badge').textContent = `${customerProfile.name} · ${customerProfile.email}`;
+  loadCustomerSessionData();
+  updateCartBar();
+  document.getElementById('track-header-button').style.display = lastOrder ? 'block' : 'none';
+  onSearch(document.getElementById('search-input').value || '');
+}
+
+function logoutCustomer(){
+  closeCart();
+  closeCheckout();
+  closeTracking();
+  closeStoresMap();
+  closeDetail();
+  localStorage.removeItem('customer_token');
+  localStorage.removeItem('customer_profile');
+  customerToken = null;
+  customerProfile = null;
   cart = [];
   currentStoreForCart = null;
   lastOrder = null;
+  document.getElementById('client-app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'grid';
+  document.getElementById('auth-password').value = '';
+  document.getElementById('auth-error').textContent = '';
 }
 let searchTimer = null;
 let activeCategory = '';
@@ -368,8 +594,9 @@ function updateCartBar(){
 }
 
 function persistCart(){
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-  localStorage.setItem(STORE_STORAGE_KEY, JSON.stringify(currentStoreForCart));
+  if(!customerProfile) return;
+  localStorage.setItem(getCartStorageKey(), JSON.stringify(cart));
+  localStorage.setItem(getStoreStorageKey(), JSON.stringify(currentStoreForCart));
 }
 
 function formatQuantity(value){
@@ -419,6 +646,10 @@ function openCheckout(){
   const total = cart.reduce((s,i) => s + i.quantity * i.price, 0);
   const selectedStore = cart[0] || {};
   const offersDelivery = selectedStore.offers_delivery !== false;
+  const defaultName = (customerProfile && customerProfile.name) || '';
+  const defaultPhone = (customerProfile && customerProfile.phone) || '';
+  const defaultAddress = (customerProfile && customerProfile.address) || '';
+  isDelivery = false;
   document.getElementById('checkout-content').innerHTML = `
     <h3>Confirmar pedido</h3>
     <div class="tracking-location" style="margin:8px 0 14px;"><strong>${selectedStore.store_name || 'Tienda seleccionada'}</strong><br>${selectedStore.store_address || 'Dirección no registrada'}${offersDelivery ? '<br><span style="color:var(--green);">Ofrece domicilio</span>' : '<br><span style="color:var(--muted);">Solo recoge en tienda</span>'}</div>
@@ -432,9 +663,9 @@ function openCheckout(){
       <button id="btn-delivery" onclick="setDeliveryMode(true)" ${offersDelivery ? '' : 'disabled'}>A domicilio</button>
     </div>
 
-    <div class="field"><label>Tu nombre</label><input type="text" id="chk-name"></div>
-    <div class="field"><label>Tu teléfono</label><input type="text" id="chk-phone"></div>
-    <div class="field" id="address-field" style="display:none;"><label>Dirección de entrega</label><input type="text" id="chk-address"></div>
+    <div class="field"><label>Tu nombre</label><input type="text" id="chk-name" value="${defaultName.replace(/"/g, '&quot;')}"></div>
+    <div class="field"><label>Tu teléfono</label><input type="text" id="chk-phone" value="${defaultPhone.replace(/"/g, '&quot;')}"></div>
+    <div class="field" id="address-field" style="display:none;"><label>Dirección de entrega</label><input type="text" id="chk-address" value="${defaultAddress.replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>Forma de pago</label><select id="chk-payment"><option value="contra_entrega">Pagar al recibir</option></select></div>
 
     <p class="form-error" id="checkout-error"></p>
@@ -452,6 +683,15 @@ function setDeliveryMode(delivery){
   document.getElementById('address-field').style.display = delivery ? 'block' : 'none';
 }
 
+function saveCustomerOrderLocally(orderRecord){
+  try{
+    const list = JSON.parse(localStorage.getItem(getOrdersListStorageKey()) || '[]');
+    const filtered = list.filter(o => o.id !== orderRecord.id);
+    filtered.unshift(orderRecord);
+    localStorage.setItem(getOrdersListStorageKey(), JSON.stringify(filtered));
+  }catch(_e){}
+}
+
 async function submitOrder(){
   const name = document.getElementById('chk-name').value.trim();
   const phone = document.getElementById('chk-phone').value.trim();
@@ -466,8 +706,11 @@ async function submitOrder(){
   button.disabled = true;
   button.textContent = 'Enviando pedido...';
 
+  const selectedStore = cart[0] || {};
   const body = {
     store_id: currentStoreForCart,
+    customer_id: customerProfile ? customerProfile.id : null,
+    customer_email: customerProfile ? customerProfile.email : null,
     customer_name: name,
     customer_phone: phone,
     delivery_address: address,
@@ -475,9 +718,14 @@ async function submitOrder(){
     items: cart.map(i => ({product_id: i.product_id, quantity: i.quantity}))
   };
 
+  const headers = {'Content-Type':'application/json'};
+  if(customerToken && !customerToken.startsWith('local-token-')){
+    headers['Authorization'] = `Bearer ${customerToken}`;
+  }
+
   try{
     const res = await fetch(`${API_URL}/orders`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+      method:'POST', headers, body: JSON.stringify(body)
     });
     if(!res.ok){
       const responseText = await res.text();
@@ -491,8 +739,23 @@ async function submitOrder(){
       throw new Error(message);
     }
     const order = await res.json();
-    lastOrder = {id: order.id, phone};
-    localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(lastOrder));
+    if(customerProfile){
+      customerProfile.name = name;
+      customerProfile.phone = phone;
+      if(address) customerProfile.address = address;
+      localStorage.setItem('customer_profile', JSON.stringify(customerProfile));
+      document.getElementById('customer-badge').textContent = `${customerProfile.name} · ${customerProfile.email}`;
+    }
+    lastOrder = {id: order.id, phone, email: customerProfile ? customerProfile.email : null};
+    localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(lastOrder));
+    saveCustomerOrderLocally({
+      id: order.id,
+      status: order.status || 'pendiente',
+      total: order.total || cart.reduce((s,i) => s + i.quantity * i.price, 0),
+      store_name: selectedStore.store_name || 'Tienda',
+      customer_phone: phone,
+      created_at: new Date().toISOString()
+    });
     document.getElementById('track-header-button').style.display = 'block';
     document.getElementById('checkout-content').innerHTML = `
       <div class="success-box">
@@ -529,7 +792,14 @@ async function renderTracking(){
   const box = document.getElementById('tracking-content');
   box.innerHTML = '<h3>Seguimiento del pedido</h3><p class="tracking-location">Consultando estado...</p>';
   try{
-    const res = await fetch(`${API_URL}/orders/track/${lastOrder.id}?phone=${encodeURIComponent(lastOrder.phone)}`);
+    const headers = {};
+    if(customerToken && !customerToken.startsWith('local-token-')){
+      headers['Authorization'] = `Bearer ${customerToken}`;
+    }
+    const queryParams = new URLSearchParams();
+    if(lastOrder.phone) queryParams.set('phone', lastOrder.phone);
+    if(customerProfile && customerProfile.email) queryParams.set('email', customerProfile.email);
+    const res = await fetch(`${API_URL}/orders/track/${lastOrder.id}?${queryParams.toString()}`, {headers});
     if(!res.ok) throw new Error('No se pudo consultar el pedido');
     const data = await res.json();
     const location = data.delivery_address ? `Entrega en: ${data.delivery_address}` : `Recogida en: ${data.store_name || 'la tienda'}`;
@@ -569,37 +839,61 @@ function closeStoresMap(){ document.getElementById('stores-map-modal').style.dis
 
 async function openOrderHistory(){
   const box = document.getElementById('tracking-content');
-  if(!lastOrder){
-    box.innerHTML = `<h3>Mis pedidos</h3><p class="tracking-location">Escribe el teléfono usado al confirmar el pedido.</p><div class="field"><label>Teléfono</label><input type="tel" id="history-phone" placeholder="300 000 0000"></div><button class="btn-confirm" onclick="loadOrderHistory(document.getElementById('history-phone').value)">Consultar pedidos</button>`;
-    document.getElementById('tracking-modal').style.display = 'flex';
-    return;
-  }
-  loadOrderHistory(lastOrder.phone);
+  box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">Cargando historial de tu cuenta...</p>';
+  document.getElementById('tracking-modal').style.display = 'flex';
+  await loadOrderHistory();
 }
 
-async function loadOrderHistory(phone){
-  phone = phone.trim();
-  if(!phone) return;
+async function loadOrderHistory(){
   const box = document.getElementById('tracking-content');
-  box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">Cargando historial...</p>';
-  document.getElementById('tracking-modal').style.display = 'flex';
+  const defaultPhone = (customerProfile && customerProfile.phone) || (lastOrder && lastOrder.phone) || '';
+  let orders = [];
+  let localOrders = [];
   try{
-    const res = await fetch(`${API_URL}/orders/history?phone=${encodeURIComponent(phone.trim())}`);
-    if(!res.ok) throw new Error('No se pudo cargar el historial');
-    const orders = await res.json();
-    if(!orders.length){
-      box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">No encontramos pedidos con ese teléfono.</p><button class="btn-confirm" onclick="closeTracking()">Cerrar</button>';
-      return;
+    localOrders = JSON.parse(localStorage.getItem(getOrdersListStorageKey()) || '[]');
+  }catch(_e){ localOrders = []; }
+
+  try{
+    if(customerToken && !customerToken.startsWith('local-token-')){
+      const meRes = await fetch(`${API_URL}/orders/customer/me`, {
+        headers: {'Authorization': `Bearer ${customerToken}`}
+      });
+      if(meRes.ok){
+        orders = await meRes.json();
+      }
     }
-    box.innerHTML = `<h3>Mis pedidos</h3>${orders.map(order => `<button class="store-map-card" style="width:100%;text-align:left;border:0;cursor:pointer;" onclick="selectHistoricalOrder(${order.id}, '${phone.replace(/'/g, "\\'")}')"><div><h3>Pedido #${order.id}</h3><p>${order.store_name} · ${order.status.replace('_', ' ')}</p></div><strong class="mono">$${Number(order.total).toLocaleString('es-CO')}</strong></button>`).join('')}`;
-  }catch(error){
-    box.innerHTML = `<h3>Mis pedidos</h3><p class="tracking-location">${error.message}</p><button class="btn-confirm" onclick="openOrderHistory()">Reintentar</button>`;
+    if(!orders.length && defaultPhone){
+      const res = await fetch(`${API_URL}/orders/history?phone=${encodeURIComponent(defaultPhone.trim())}`);
+      if(res.ok){
+        const byPhone = await res.json();
+        if(localOrders.length){
+          const localIds = new Set(localOrders.map(o => o.id));
+          orders = byPhone.filter(o => localIds.has(o.id));
+        } else {
+          orders = byPhone;
+        }
+      }
+    }
+  }catch(_error){}
+
+  const mergedById = new Map();
+  orders.forEach(o => mergedById.set(o.id, o));
+  localOrders.forEach(o => { if(!mergedById.has(o.id)) mergedById.set(o.id, o); });
+  const finalOrders = Array.from(mergedById.values());
+
+  if(!finalOrders.length){
+    box.innerHTML = `<h3>Mis pedidos</h3><p class="tracking-location">Aún no tienes pedidos registrados en la cuenta <strong>${customerProfile ? customerProfile.email : ''}</strong>.</p><button class="btn-confirm" onclick="closeTracking()">Cerrar</button>`;
+    return;
   }
+  box.innerHTML = `<h3>Mis pedidos (${customerProfile ? customerProfile.name : 'Cliente'})</h3>${finalOrders.map(order => {
+    const orderPhone = order.customer_phone || defaultPhone || '';
+    return `<button class="store-map-card" style="width:100%;text-align:left;border:0;cursor:pointer;" onclick="selectHistoricalOrder(${order.id}, '${String(orderPhone).replace(/'/g, "\\'")}')"><div><h3>Pedido #${order.id}</h3><p>${order.store_name || 'Tienda'} · ${(order.status || 'pendiente').replace('_', ' ')}</p></div><strong class="mono">$${Number(order.total).toLocaleString('es-CO')}</strong></button>`;
+  }).join('')}`;
 }
 
 function selectHistoricalOrder(orderId, phone){
-  lastOrder = {id: orderId, phone};
-  localStorage.setItem(LAST_ORDER_STORAGE_KEY, JSON.stringify(lastOrder));
+  lastOrder = {id: orderId, phone: phone || (customerProfile && customerProfile.phone) || ''};
+  localStorage.setItem(getLastOrderStorageKey(), JSON.stringify(lastOrder));
   document.getElementById('track-header-button').style.display = 'block';
   renderTracking();
 }
@@ -611,9 +905,9 @@ function resetCart(){
   updateCartBar();
 }
 
-updateCartBar();
-if(lastOrder) document.getElementById('track-header-button').style.display = 'block';
-onSearch('');
+if(customerToken && customerProfile){
+  enterCustomerApp();
+}
 </script>
 </body>
 </html>
