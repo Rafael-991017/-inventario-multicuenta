@@ -158,6 +158,8 @@
     <div class="nav-item active" data-view="inventory" onclick="switchView('inventory')">Inventario</div>
     <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos</div>
     <div class="nav-item" data-view="sales" onclick="switchView('sales')">Vender</div>
+    <div class="nav-item" data-view="profits" onclick="switchView('profits')">Ganancias</div>
+    <div class="nav-item" data-view="suppliers" onclick="switchView('suppliers')">Proveedores</div>
     <div class="nav-item" data-view="profile" onclick="switchView('profile')">Mi tienda</div>
     <div class="nav-item logout" onclick="logout()">Cerrar sesión</div>
   </div>
@@ -168,7 +170,7 @@
       <div class="page-header">
         <div>
           <h2>Inventario</h2>
-          <div class="sub">Productos, precio y stock disponible en tu tienda</div>
+          <div class="sub">Productos, proveedor, precio de compra, precio de venta y stock disponible</div>
         </div>
         <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
       </div>
@@ -178,14 +180,14 @@
         <div class="summary-card warning"><div class="label">Stock bajo</div><div class="value" id="summary-low-stock">0</div></div>
         <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="summary-sales-count">0</div></div>
         <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div></div>
-        <div class="summary-card warning"><div class="label">Pedidos pendientes</div><div class="value" id="summary-pending-orders">0</div></div>
+        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta total</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
       </div>
       <div class="inventory-toolbar">
         <strong>Tu catálogo</strong>
         <input type="search" id="inventory-search" placeholder="Buscar en inventario..." oninput="renderInventory(this.value)">
       </div>
       <table>
-        <thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Compra</th><th>Venta</th><th>Ganancia / u.</th><th>Stock</th><th></th></tr></thead>
         <tbody id="inventory-tbody"></tbody>
       </table>
     </section>
@@ -235,6 +237,58 @@
       </div>
     </section>
 
+    <!-- Vista Ganancias -->
+    <section id="view-profits" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Ganancias y Reportes</h2>
+          <div class="sub">Compara a cuánto compraste y a cuánto vendiste por día, semana o mes</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn small" id="period-day" onclick="loadProfits('day')">Hoy (Diario)</button>
+          <button class="btn small secondary" id="period-week" onclick="loadProfits('week')">Semanal (7 días)</button>
+          <button class="btn small secondary" id="period-month" onclick="loadProfits('month')">Mensual (30 días)</button>
+          <button class="btn small secondary" id="period-all" onclick="loadProfits('all')">Todo</button>
+        </div>
+      </div>
+      <div class="summary-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+        <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="profit-sales-count">0</div></div>
+        <div class="summary-card"><div class="label">Ingresos (Ventas)</div><div class="value" id="profit-revenue">$0</div></div>
+        <div class="summary-card warning"><div class="label">Costo (Compra)</div><div class="value" id="profit-cost">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta</div><div class="value" id="profit-net" style="color:var(--green);">$0</div></div>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Cliente / Tipo</th><th>Productos vendidos</th><th>Venta</th><th>Costo compra</th><th>Ganancia</th></tr></thead>
+        <tbody id="profits-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Proveedores -->
+    <section id="view-suppliers" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Proveedores</h2>
+          <div class="sub">Registra tus proveedores para asociarlos a los productos de tu inventario</div>
+        </div>
+      </div>
+      <div class="profile-card" style="margin-bottom:24px;max-width:100%;">
+        <h3 style="margin-bottom:14px;font-size:16px;">Registrar nuevo proveedor</h3>
+        <div class="profile-grid">
+          <div class="field"><label>Nombre de la empresa o proveedor *</label><input type="text" id="sup-name" placeholder="Ej: Lácteos del Caribe / Colanta"></div>
+          <div class="field"><label>Nombre del vendedor / contacto</label><input type="text" id="sup-contact" placeholder="Ej: Carlos Pérez"></div>
+          <div class="field"><label>Teléfono / WhatsApp</label><input type="tel" id="sup-phone" placeholder="300 000 0000"></div>
+          <div class="field"><label>Correo electrónico (opcional)</label><input type="email" id="sup-email" placeholder="proveedor@correo.com"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Productos que suministra / Notas</label><input type="text" id="sup-notes" placeholder="Ej: Queso costeño, suero, leche — visita los martes y viernes"></div>
+        </div>
+        <button class="btn" onclick="saveSupplier()">+ Guardar proveedor</button>
+        <p id="supplier-message" style="font-size:13px;color:var(--green);margin:10px 0 0;"></p>
+      </div>
+      <table>
+        <thead><tr><th>Proveedor</th><th>Contacto</th><th>Teléfono</th><th>Productos / Notas</th><th></th></tr></thead>
+        <tbody id="suppliers-tbody"></tbody>
+      </table>
+    </section>
+
     <section id="view-profile" style="display:none;">
       <div class="page-header">
         <div><h2>Mi tienda</h2><div class="sub">Mantén actualizados tus datos y ubicación</div></div>
@@ -267,9 +321,17 @@
       <input type="text" id="modal-product-search" placeholder="Escribe el nombre..." oninput="searchProducts(this.value)">
       <div id="product-suggestions" style="margin-top:6px;font-size:13px;"></div>
     </div>
-    <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes"></div>
+    <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes, Lácteos"></div>
+    <div class="field">
+      <label>Proveedor</label>
+      <input type="text" id="modal-supplier" list="suppliers-datalist" placeholder="Selecciona o escribe el proveedor...">
+      <datalist id="suppliers-datalist"></datalist>
+    </div>
     <div class="field"><label>Imagen del producto</label><input type="file" id="modal-image-file" accept="image/*" onchange="previewProductImage(this)"><input type="url" id="modal-image-url" placeholder="O pega una URL de imagen" style="margin-top:6px;"><img id="image-preview" alt="Vista previa" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:4px;margin-top:8px;"></div>
-    <div class="field"><label>Precio</label><input type="number" id="modal-price" placeholder="0"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field"><label>Precio de compra / costo ($)</label><input type="number" id="modal-cost-price" placeholder="Ej: 9000" min="0"></div>
+      <div class="field"><label>Precio de venta ($)</label><input type="number" id="modal-price" placeholder="Ej: 13000" min="0"></div>
+    </div>
     <div class="field"><label>Stock disponible</label><input type="number" id="modal-stock" placeholder="0" min="0" step="0.01"></div>
     <div class="field"><label>Tipo de venta</label><select id="modal-unit"><option value="unidad">Por unidad</option><option value="kg">Por kilogramo (kg)</option><option value="lb">Por libra (lb)</option></select></div>
     <div style="display:flex;gap:10px;margin-top:8px;">
@@ -351,21 +413,122 @@ async function doLogin(email, password){
 // sesión con su propio almacenamiento local.
 function localStorage_shim_set(){}
 
+let suppliersList = [];
+let currentProfitPeriod = 'month';
+
+function getLocalMetaKey(){ return `inventario_meta_${STORE ? STORE.id : 'default'}`; }
+function getLocalSuppliersKey(){ return `inventario_suppliers_${STORE ? STORE.id : 'default'}`; }
+function getLocalInventoryMeta(){
+  try{ return JSON.parse(localStorage.getItem(getLocalMetaKey()) || '{}'); }catch(_e){ return {}; }
+}
+function saveLocalInventoryMeta(productId, cost_price, supplier){
+  try{
+    const meta = getLocalInventoryMeta();
+    meta[productId] = {cost_price: Number(cost_price) || 0, supplier: supplier || null};
+    localStorage.setItem(getLocalMetaKey(), JSON.stringify(meta));
+  }catch(_e){}
+}
+
 function enterApp(){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('sidebar-store-name').textContent = STORE.name;
+  loadSuppliers();
   loadInventory();
   loadStoreSummary();
 }
 
 async function loadStoreSummary(){
-  const response = await authFetch('/stores/me/summary');
-  if(!response.ok) return;
-  const summary = await response.json();
+  if(inventoryItems.length === 0){
+    try{
+      const invRes = await authFetch('/stores/me/inventory');
+      if(invRes.ok) inventoryItems = enrichInventoryWithMeta(await invRes.json());
+    }catch(_e){}
+  }
+  const summary = await computeStoreSummary('all');
   document.getElementById('summary-sales-count').textContent = summary.sales_count;
   document.getElementById('summary-sales-total').textContent = `$${Number(summary.sales_total).toLocaleString('es-CO')}`;
-  document.getElementById('summary-pending-orders').textContent = summary.pending_orders;
+  const profitEl = document.getElementById('summary-profit-total');
+  if(profitEl) profitEl.textContent = `$${Number(summary.profit_total).toLocaleString('es-CO')}`;
+}
+
+async function computeStoreSummary(period = 'all'){
+  try{
+    const response = await authFetch(`/stores/me/summary?period=${encodeURIComponent(period)}`);
+    if(response.ok){
+      const data = await response.json();
+      if(typeof data.profit_total === 'number' && Array.isArray(data.history)){
+        return data;
+      }
+    }
+  }catch(_e){}
+
+  // Cálculo de respaldo directo desde /orders/me + costos del inventario
+  let orders = [];
+  try{
+    const res = await authFetch('/orders/me');
+    if(res.ok) orders = await res.json();
+  }catch(_e){}
+
+  const now = new Date();
+  let cutoff = null;
+  if(period === 'day') cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  else if(period === 'week') cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  else if(period === 'month') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const meta = getLocalInventoryMeta();
+  const invMap = {};
+  inventoryItems.forEach(item => {
+    invMap[item.product_id] = {
+      name: item.product ? item.product.name : `Prod #${item.product_id}`,
+      cost_price: Number(item.cost_price || (meta[item.product_id] && meta[item.product_id].cost_price) || 0),
+      unit: item.unit || 'unidad'
+    };
+  });
+
+  const delivered = orders.filter(o => {
+    if(o.status !== 'entregado') return false;
+    if(!cutoff) return true;
+    const dt = o.created_at ? new Date(o.created_at) : new Date(0);
+    return dt >= cutoff;
+  });
+
+  let sales_total = 0;
+  let cost_total = 0;
+  const history = delivered.map(o => {
+    const rev = Math.round(Number(o.total) || 0);
+    let cost = 0;
+    const labels = [];
+    (o.items || []).forEach(it => {
+      const info = invMap[it.product_id] || {};
+      const qty = Number(it.quantity) || 0;
+      const unitCost = Number(it.cost_price || info.cost_price || 0);
+      cost += unitCost * qty;
+      const unit = it.unit || info.unit || 'un.';
+      labels.push(`${formatQuantity(qty)} ${unit} ${info.name || ('Prod #' + it.product_id)}`);
+    });
+    cost = Math.round(cost);
+    const profit = rev - cost;
+    sales_total += rev;
+    cost_total += cost;
+    return {
+      id: o.id,
+      customer_name: o.customer_name || 'Venta',
+      created_at: o.created_at,
+      items_summary: labels.join(', ') || 'Venta',
+      total: rev,
+      cost,
+      profit
+    };
+  });
+
+  return {
+    sales_count: delivered.length,
+    sales_total,
+    cost_total,
+    profit_total: sales_total - cost_total,
+    history
+  };
 }
 
 function logout(){
@@ -379,9 +542,13 @@ function switchView(view){
   document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
   document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
   document.getElementById('view-sales').style.display = view === 'sales' ? 'block' : 'none';
+  document.getElementById('view-profits').style.display = view === 'profits' ? 'block' : 'none';
+  document.getElementById('view-suppliers').style.display = view === 'suppliers' ? 'block' : 'none';
   document.getElementById('view-profile').style.display = view === 'profile' ? 'block' : 'none';
   if(view === 'orders') loadOrders();
   if(view === 'sales') loadSalesForm();
+  if(view === 'profits') loadProfits(currentProfitPeriod);
+  if(view === 'suppliers') loadSuppliers();
   if(view === 'profile') loadProfile();
 }
 
@@ -396,10 +563,22 @@ function stockClass(stock){
   return 'stock-ok';
 }
 
+function enrichInventoryWithMeta(items){
+  const meta = getLocalInventoryMeta();
+  return items.map(item => {
+    const local = meta[item.product_id] || {};
+    return {
+      ...item,
+      cost_price: Number(item.cost_price || local.cost_price || 0),
+      supplier: item.supplier || local.supplier || ''
+    };
+  });
+}
+
 async function loadInventory(){
   const res = await authFetch('/stores/me/inventory');
   const items = await res.json();
-  inventoryItems = items;
+  inventoryItems = enrichInventoryWithMeta(items);
   updateInventorySummary();
   renderInventory(document.getElementById('inventory-search').value);
 }
@@ -413,22 +592,151 @@ function updateInventorySummary(){
 function renderInventory(search = ''){
   const normalizedSearch = search.trim().toLowerCase();
   const items = inventoryItems.filter(item =>
-    !normalizedSearch || item.product.name.toLowerCase().includes(normalizedSearch)
+    !normalizedSearch
+    || item.product.name.toLowerCase().includes(normalizedSearch)
+    || (item.supplier && item.supplier.toLowerCase().includes(normalizedSearch))
   );
   const tbody = document.getElementById('inventory-tbody');
   if(items.length === 0){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto para empezar a vender.'}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto para empezar a vender.'}</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = items.map(item => `
+  tbody.innerHTML = items.map(item => {
+    const unitSuffix = item.unit && item.unit !== 'unidad' ? ` / ${item.unit}` : '';
+    const cost = Number(item.cost_price || 0);
+    const unitProfit = Number(item.price || 0) - cost;
+    return `
     <tr>
       <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
       <td>${item.product.category || '—'}</td>
-      <td class="mono">$${item.price.toLocaleString('es-CO')}${item.unit && item.unit !== 'unidad' ? ` / ${item.unit}` : ''}</td>
+      <td>${item.supplier || '<span style="color:var(--muted);">Sin proveedor</span>'}</td>
+      <td class="mono" style="color:var(--muted);">$${cost.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono">$${item.price.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono" style="color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">$${unitProfit.toLocaleString('es-CO')}${unitSuffix}</td>
       <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${formatQuantity(item.stock)} ${item.unit || 'unidad'}</span></td>
       <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
     </tr>
+  `}).join('');
+}
+
+async function loadProfits(period = 'month'){
+  currentProfitPeriod = period;
+  ['day','week','month','all'].forEach(p => {
+    const btn = document.getElementById(`period-${p}`);
+    if(btn) btn.classList.toggle('secondary', p !== period);
+  });
+  if(inventoryItems.length === 0) await loadInventory();
+  const data = await computeStoreSummary(period);
+  document.getElementById('profit-sales-count').textContent = data.sales_count;
+  document.getElementById('profit-revenue').textContent = `$${Number(data.sales_total).toLocaleString('es-CO')}`;
+  document.getElementById('profit-cost').textContent = `$${Number(data.cost_total).toLocaleString('es-CO')}`;
+  document.getElementById('profit-net').textContent = `$${Number(data.profit_total).toLocaleString('es-CO')}`;
+
+  const tbody = document.getElementById('profits-tbody');
+  if(!data.history || data.history.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="eyebrow">Sin ventas en este periodo</span><p>Cuando registres ventas en mostrador o marques pedidos como entregados, verás aquí el desglose de ganancias.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.history.map(row => `
+    <tr>
+      <td class="mono">#${row.id}</td>
+      <td>${row.customer_name}</td>
+      <td style="font-size:13px;">${row.items_summary || 'Venta'}</td>
+      <td class="mono">$${Number(row.total).toLocaleString('es-CO')}</td>
+      <td class="mono" style="color:var(--muted);">$${Number(row.cost).toLocaleString('es-CO')}</td>
+      <td class="mono" style="color:${row.profit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">$${Number(row.profit).toLocaleString('es-CO')}</td>
+    </tr>
   `).join('');
+}
+
+async function loadSuppliers(){
+  let list = [];
+  try{
+    const res = await authFetch('/stores/me/suppliers');
+    if(res.ok){
+      list = await res.json();
+      localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(list));
+    } else {
+      list = JSON.parse(localStorage.getItem(getLocalSuppliersKey()) || '[]');
+    }
+  }catch(_e){
+    try{ list = JSON.parse(localStorage.getItem(getLocalSuppliersKey()) || '[]'); }catch(_err){ list = []; }
+  }
+  suppliersList = list;
+  renderSuppliersDatalist();
+  renderSuppliersTable();
+}
+
+function renderSuppliersDatalist(){
+  const dl = document.getElementById('suppliers-datalist');
+  if(!dl) return;
+  dl.innerHTML = suppliersList.map(s => `<option value="${s.name.replace(/"/g, '&quot;')}">${s.contact_name || ''}</option>`).join('');
+}
+
+function renderSuppliersTable(){
+  const tbody = document.getElementById('suppliers-tbody');
+  if(!tbody) return;
+  if(suppliersList.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">Sin proveedores registrados</span><p>Usa el formulario de arriba para registrar tus proveedores.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = suppliersList.map(s => `
+    <tr>
+      <td><strong>${s.name}</strong>${s.email ? `<br><span style="color:var(--muted);font-size:12px;">${s.email}</span>` : ''}</td>
+      <td>${s.contact_name || '—'}</td>
+      <td class="mono">${s.phone || '—'}</td>
+      <td>${s.notes || '—'}</td>
+      <td><button class="btn small secondary" onclick="deleteSupplier(${s.id})">Eliminar</button></td>
+    </tr>
+  `).join('');
+}
+
+async function saveSupplier(){
+  const name = document.getElementById('sup-name').value.trim();
+  const contact_name = document.getElementById('sup-contact').value.trim();
+  const phone = document.getElementById('sup-phone').value.trim();
+  const email = document.getElementById('sup-email').value.trim();
+  const notes = document.getElementById('sup-notes').value.trim();
+  const msg = document.getElementById('supplier-message');
+  if(!name){
+    alert('Escribe el nombre del proveedor o empresa');
+    return;
+  }
+  try{
+    const res = await authFetch('/stores/me/suppliers', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, contact_name: contact_name || null, phone: phone || null, email: email || null, notes: notes || null})
+    });
+    if(res.ok){
+      const created = await res.json();
+      suppliersList.push(created);
+    } else {
+      suppliersList.push({id: Date.now(), store_id: STORE ? STORE.id : 0, name, contact_name, phone, email, notes});
+    }
+  }catch(_e){
+    suppliersList.push({id: Date.now(), store_id: STORE ? STORE.id : 0, name, contact_name, phone, email, notes});
+  }
+  localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(suppliersList));
+  document.getElementById('sup-name').value = '';
+  document.getElementById('sup-contact').value = '';
+  document.getElementById('sup-phone').value = '';
+  document.getElementById('sup-email').value = '';
+  document.getElementById('sup-notes').value = '';
+  msg.textContent = 'Proveedor guardado correctamente.';
+  renderSuppliersDatalist();
+  renderSuppliersTable();
+}
+
+async function deleteSupplier(id){
+  if(!confirm('¿Eliminar este proveedor?')) return;
+  try{
+    await authFetch(`/stores/me/suppliers/${id}`, {method:'DELETE'});
+  }catch(_e){}
+  suppliersList = suppliersList.filter(s => s.id !== id);
+  localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(suppliersList));
+  renderSuppliersDatalist();
+  renderSuppliersTable();
 }
 
 async function loadSalesForm(){
@@ -614,6 +922,8 @@ function openInventoryModal(){
   document.querySelector('#inventory-modal h3').textContent = 'Agregar producto al inventario';
   document.getElementById('modal-product-search').value = '';
   document.getElementById('modal-category').value = '';
+  document.getElementById('modal-supplier').value = '';
+  document.getElementById('modal-cost-price').value = '';
   document.getElementById('modal-price').value = '';
   document.getElementById('modal-stock').value = '';
   document.getElementById('modal-unit').value = 'unidad';
@@ -622,6 +932,7 @@ function openInventoryModal(){
   document.getElementById('image-preview').style.display = 'none';
   document.getElementById('product-suggestions').innerHTML = '';
   selectedProductId = null; selectedProductName = null;
+  renderSuppliersDatalist();
 }
 
 function openEditInventoryModal(item){
@@ -631,6 +942,8 @@ function openEditInventoryModal(item){
   selectedProductName = item.product.name;
   document.getElementById('modal-product-search').value = item.product.name;
   document.getElementById('modal-category').value = item.product.category || '';
+  document.getElementById('modal-supplier').value = item.supplier || '';
+  document.getElementById('modal-cost-price').value = item.cost_price || 0;
   document.getElementById('modal-price').value = item.price;
   document.getElementById('modal-stock').value = item.stock;
   document.getElementById('modal-unit').value = item.unit || 'unidad';
@@ -685,10 +998,12 @@ function readProductImage(){
 
 async function saveInventoryItem(){
   const price = parseFloat(document.getElementById('modal-price').value);
+  const cost_price = parseFloat(document.getElementById('modal-cost-price').value) || 0;
+  const supplier = document.getElementById('modal-supplier').value.trim() || null;
   const stock = parseFloat(document.getElementById('modal-stock').value);
   const unit = document.getElementById('modal-unit').value;
   const name = document.getElementById('modal-product-search').value.trim();
-  if(!name || isNaN(price) || price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precio y stock con valores válidos'); return; }
+  if(!name || isNaN(price) || price < 0 || cost_price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precios y stock con valores válidos'); return; }
   const imageUrl = await readProductImage();
 
   let productId = selectedProductId;
@@ -707,12 +1022,15 @@ async function saveInventoryItem(){
     });
   }
 
+  saveLocalInventoryMeta(productId, cost_price, supplier);
+
   await authFetch('/stores/me/inventory', {
     method:'PUT', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({product_id: productId, price, stock, unit})
+    body: JSON.stringify({product_id: productId, price, cost_price, supplier, stock, unit})
   });
   closeInventoryModal();
-  loadInventory();
+  await loadInventory();
+  loadStoreSummary();
 }
 
 async function loadOrders(){

@@ -135,6 +135,8 @@ class InventoryUpsert(BaseModel):
     product_id: int
     stock: float
     price: float
+    cost_price: float = 0.0
+    supplier: Optional[str] = None
     unit: str = "unidad"
 
 
@@ -144,8 +146,32 @@ class InventoryOut(BaseModel):
     store_id: int
     stock: float
     price: float
+    cost_price: Optional[float] = 0.0
+    supplier: Optional[str] = None
     unit: str = "unidad"
     product: ProductOut
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Suppliers ----------
+class SupplierCreate(BaseModel):
+    name: str
+    contact_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class SupplierOut(BaseModel):
+    id: int
+    store_id: int
+    name: str
+    contact_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -194,6 +220,7 @@ class OrderItemOut(BaseModel):
     product_id: int
     quantity: float
     unit_price: float
+    cost_price: Optional[float] = 0.0
     unit: str = "unidad"
 
     class Config:

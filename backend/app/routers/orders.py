@@ -38,7 +38,8 @@ def create_order(
         inventory_changes.append(item)
         total += round(float(item["price"]) * item_in.quantity)
         order_items.append({"product_id": item_in.product_id, "quantity": item_in.quantity,
-                    "unit_price": item["price"], "unit": item.get("unit", "unidad")})
+                    "unit_price": item["price"], "cost_price": float(item.get("cost_price", 0) or 0),
+                    "unit": item.get("unit", "unidad")})
 
     for item in inventory_changes:
         collection("inventory").document(str(item["id"])).set(item)
