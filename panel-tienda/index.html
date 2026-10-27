@@ -145,11 +145,6 @@
 
     <p class="error-msg" id="error-msg"></p>
     <p class="toggle-mode" id="toggle-text">¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a></p>
-
-    <div class="api-config">
-      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">URL de la API</label>
-      <input type="text" id="api-url" value="https://vent-fast-yxui.onrender.com">
-    </div>
   </div>
 </div>
 
@@ -280,7 +275,7 @@
 </div>
 
 <script>
-let API_URL = document.getElementById('api-url').value;
+const API_URL = 'https://vent-fast-yxui.onrender.com';
 let TOKEN = null;
 let STORE = null;
 let selectedProductId = null;
@@ -305,7 +300,6 @@ function showError(msg){
 }
 
 async function register(){
-  API_URL = document.getElementById('api-url').value;
   const body = {
     name: document.getElementById('reg-name').value,
     email: document.getElementById('reg-email').value,
@@ -326,7 +320,6 @@ async function register(){
 }
 
 async function login(){
-  API_URL = document.getElementById('api-url').value;
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   await doLogin(email, password);
