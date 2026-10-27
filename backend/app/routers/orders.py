@@ -182,6 +182,8 @@ def update_order_status(
     data = order.to_dict()
     if data.get("store_id") != current_store["id"]:
         raise HTTPException(404, "Pedido no encontrado")
+    if data.get("status") == "entregado":
+        raise HTTPException(400, "Un pedido entregado ya no puede cambiar de estado")
     data["id"] = order_id
     data["status"] = status_in.status.value
     reference.update({"status": data["status"]})

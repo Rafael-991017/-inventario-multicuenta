@@ -36,6 +36,8 @@
   .field input:focus{outline:none;border-color:var(--navy);}
   button.primary{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;}
   button.primary:hover{background:var(--navy-light);}
+  button.secondary-login{width:100%;padding:11px 12px;margin-top:10px;background:transparent;color:var(--navy);border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  button.secondary-login:hover{background:var(--cream);border-color:var(--amber-dark);}
   .toggle-mode{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
   .toggle-mode a{color:var(--amber-dark);cursor:pointer;text-decoration:none;font-weight:600;}
   .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none;}
@@ -139,12 +141,14 @@
       <button class="primary" onclick="register()">Crear tienda</button>
     </div>
 
+    <button class="secondary-login" type="button" onclick="window.location.href='../app-cliente/perfiles.html'">← Volver al inicio</button>
+
     <p class="error-msg" id="error-msg"></p>
     <p class="toggle-mode" id="toggle-text">¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a></p>
 
     <div class="api-config">
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:5px;">URL de la API</label>
-      <input type="text" id="api-url" value="https://vent-fast.onrender.com">
+      <input type="text" id="api-url" value="https://vent-fast-yxui.onrender.com">
     </div>
   </div>
 </div>
@@ -680,13 +684,16 @@ async function loadOrders(){
       <td class="mono">$${o.total.toLocaleString('es-CO')}</td>
       <td><span class="status-pill status-${o.status}">${o.status.replace('_',' ')}</span></td>
       <td>
-        <select onchange="updateOrderStatus(${o.id}, this.value)" style="padding:5px;border-radius:3px;border:1px solid var(--line);font-size:12px;">
-          <option value="">Cambiar estado...</option>
-          <option value="confirmado">Confirmado</option>
-          <option value="en_camino">En camino</option>
-          <option value="entregado">Entregado</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
+        ${o.status === 'entregado'
+          ? '<span style="color:var(--muted);font-size:12px;font-weight:500;">Pedido finalizado</span>'
+          : `<select onchange="updateOrderStatus(${o.id}, this.value)" style="padding:5px;border-radius:3px;border:1px solid var(--line);font-size:12px;">
+              <option value="">Cambiar estado...</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="en_camino">En camino</option>
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>`
+        }
       </td>
     </tr>
   `).join('');
@@ -694,11 +701,16 @@ async function loadOrders(){
 
 async function updateOrderStatus(orderId, status){
   if(!status) return;
-  await authFetch(`/orders/${orderId}/status`, {
+  const res = await authFetch(`/orders/${orderId}/status`, {
     method:'PATCH', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({status})
   });
+  if(!res.ok){
+    const err = await res.json().catch(() => ({}));
+    alert(err.detail || 'No se pudo cambiar el estado del pedido.');
+  }
   loadOrders();
+  loadStoreSummary();
 }
 </script>
 </body>

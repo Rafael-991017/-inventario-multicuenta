@@ -24,7 +24,9 @@
       <div class="field"><label>Correo</label><input id="auth-email" type="email" placeholder="domiciliario@correo.com"></div>
       <div class="field"><label>Contraseña</label><input id="auth-password" type="password" placeholder="••••••••"></div>
       <div id="register-fields" style="display:none"><div class="field"><label>Nombre completo</label><input id="auth-name" type="text"></div><div class="field"><label>Teléfono</label><input id="auth-phone" type="tel"></div><div class="field"><label>Vehículo</label><select id="auth-vehicle"><option value="moto">Moto</option><option value="bicicleta">Bicicleta</option><option value="carro">Carro</option></select></div></div>
-      <button class="primary" id="auth-submit" onclick="submitAuth()">Entrar</button><p class="error" id="auth-error"></p>
+      <button class="primary" id="auth-submit" onclick="submitAuth()">Entrar</button>
+      <button class="secondary" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
+      <p class="error" id="auth-error"></p>
       <div class="toggle"><span id="toggle-label">¿Aún no tienes cuenta?</span> <button onclick="toggleAuth()" id="toggle-button">Regístrate</button></div>
     </div>
   </div>
