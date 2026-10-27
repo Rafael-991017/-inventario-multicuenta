@@ -34,9 +34,9 @@ def create_order(
             raise HTTPException(400, f"El producto {item_in.product_id} no está disponible en esta tienda")
         if item.get("stock", 0) < item_in.quantity:
             raise HTTPException(400, f"Stock insuficiente para el producto {item_in.product_id}")
-        item["stock"] -= item_in.quantity
+        item["stock"] = round(item["stock"] - item_in.quantity, 4)
         inventory_changes.append(item)
-        total += float(item["price"]) * item_in.quantity
+        total += round(float(item["price"]) * item_in.quantity)
         order_items.append({"product_id": item_in.product_id, "quantity": item_in.quantity,
                     "unit_price": item["price"], "unit": item.get("unit", "unidad")})
 

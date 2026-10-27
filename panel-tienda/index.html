@@ -222,8 +222,13 @@
           <div id="sale-selected" class="sale-selected" style="display:none;"></div>
         </div>
         <div class="sale-quantity-row">
-          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="0.01" step="1" value="1"></div>
+          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="0.0001" step="1" value="1" oninput="onSaleQuantityChange(this.value)"></div>
           <div class="field"><label>Unidad</label><input id="sale-unit-display" value="unidad" readonly></div>
+        </div>
+        <div class="field" id="sale-amount-field">
+          <label id="sale-amount-label">O ingresa el valor vendido en pesos ($)</label>
+          <input type="number" id="sale-amount" min="1" step="100" placeholder="Ej: 5500 o 7000" oninput="onSaleAmountChange(this.value)">
+          <div id="sale-calc-preview" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
         </div>
         <button class="btn" onclick="registerSale()">Confirmar venta</button>
         <p id="sale-message" style="font-size:13px;color:var(--green);margin-top:12px;"></p>
@@ -419,7 +424,7 @@ function renderInventory(search = ''){
     <tr>
       <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
       <td>${item.product.category || '—'}</td>
-      <td class="mono">$${item.price.toLocaleString('es-CO')}</td>
+      <td class="mono">$${item.price.toLocaleString('es-CO')}${item.unit && item.unit !== 'unidad' ? ` / ${item.unit}` : ''}</td>
       <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${formatQuantity(item.stock)} ${item.unit || 'unidad'}</span></td>
       <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
     </tr>
@@ -499,7 +504,7 @@ function searchSaleProducts(query){
 }
 
 function formatQuantity(value){
-  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 2});
+  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 3});
 }
 
 function selectSaleProduct(productId){
@@ -513,28 +518,77 @@ function selectSaleProduct(productId){
   document.getElementById('sale-quantity-label').textContent = `Cantidad vendida (${unit})`;
   const input = document.getElementById('sale-quantity');
   input.max = selectedSaleItem.stock;
-  input.step = unit === 'unidad' ? '1' : '0.01';
+  input.step = unit === 'unidad' ? '1' : '0.0001';
   input.value = unit === 'unidad' ? '1' : '0.5';
+  const amountInput = document.getElementById('sale-amount');
+  const defaultQty = parseFloat(input.value) || 0;
+  amountInput.value = selectedSaleItem.price ? Math.round(defaultQty * selectedSaleItem.price) : '';
+  updateSalePreview();
+}
+
+function onSaleQuantityChange(val){
+  if(!selectedSaleItem) return;
+  const qty = parseFloat(val);
+  const amountInput = document.getElementById('sale-amount');
+  if(Number.isFinite(qty) && qty > 0 && selectedSaleItem.price > 0){
+    amountInput.value = Math.round(qty * selectedSaleItem.price);
+  } else {
+    amountInput.value = '';
+  }
+  updateSalePreview();
+}
+
+function onSaleAmountChange(val){
+  if(!selectedSaleItem || !selectedSaleItem.price) return;
+  const amount = parseFloat(val);
+  const qtyInput = document.getElementById('sale-quantity');
+  if(Number.isFinite(amount) && amount > 0){
+    const calculatedQty = amount / selectedSaleItem.price;
+    qtyInput.value = Number(calculatedQty.toFixed(4));
+  } else {
+    qtyInput.value = '';
+  }
+  updateSalePreview();
+}
+
+function updateSalePreview(){
+  const preview = document.getElementById('sale-calc-preview');
+  if(!preview) return;
+  if(!selectedSaleItem){ preview.textContent = ''; return; }
+  const unit = selectedSaleItem.unit || 'unidad';
+  const qty = parseFloat(document.getElementById('sale-quantity').value) || 0;
+  const total = Math.round(qty * selectedSaleItem.price);
+  const remaining = Math.max(0, selectedSaleItem.stock - qty);
+  if(qty <= 0){
+    preview.textContent = '';
+    return;
+  }
+  preview.innerHTML = `Se descontarán <strong>${formatQuantity(qty)} ${unit}</strong> del stock (quedarán <strong>${formatQuantity(remaining)} ${unit}</strong>) · Total: <strong>$${total.toLocaleString('es-CO')}</strong>`;
 }
 
 async function registerSale(){
   const quantity = parseFloat(document.getElementById('sale-quantity').value);
-  if(!selectedSaleItem || !Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock){
-    alert('Indica una cantidad válida dentro del stock disponible'); return;
+  if(!selectedSaleItem || !Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock + 0.0001){
+    alert('Indica una cantidad o valor válido dentro del stock disponible'); return;
   }
+  const safeQuantity = Math.min(quantity, selectedSaleItem.stock);
   const res = await authFetch('/stores/me/sales', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity, unit: selectedSaleItem.unit || 'unidad'})
+    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity: Number(safeQuantity.toFixed(4)), unit: selectedSaleItem.unit || 'unidad'})
   });
   if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
   const sale = await res.json();
-  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada. Stock actualizado.`;
+  const unit = selectedSaleItem.unit || 'unidad';
+  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada (${formatQuantity(safeQuantity)} ${unit} · $${Math.round(sale.total).toLocaleString('es-CO')}). Stock actualizado.`;
   document.getElementById('sale-quantity').value = 1;
+  document.getElementById('sale-amount').value = '';
+  document.getElementById('sale-calc-preview').textContent = '';
   document.getElementById('sale-product-search').value = '';
   document.getElementById('sale-selected').style.display = 'none';
   selectedSaleItem = null;
   inventoryItems = [];
   await loadSalesForm();
+  await loadStoreSummary();
 }
 
 async function deleteInventoryItem(productId){

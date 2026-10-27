@@ -514,12 +514,13 @@ async function renderResults(products){
       </div>`;
     }
     const cheapest = c.availability.reduce((a,b) => a.price < b.price ? a : b);
+    const unitLabel = cheapest.unit && cheapest.unit !== 'unidad' ? ` / ${cheapest.unit}` : '';
     return `<div class="product-card" onclick="openDetail(${c.product.id}, '${c.product.name.replace(/'/g,"")}')">
       <img class="product-image" src="${c.product.image_url || 'https://placehold.co/600x400/e9eef4/718096?text=Sin+imagen'}" alt="${c.product.name}">
       <h3>${c.product.name}</h3>
       <div class="cat">${c.product.category || ''}</div>
       <div class="best-price">
-        <span class="price">Desde $${cheapest.price.toLocaleString('es-CO')}</span>
+        <span class="price">Desde $${cheapest.price.toLocaleString('es-CO')}${unitLabel}</span>
         <span class="store-count">${c.availability.length} tienda${c.availability.length>1?'s':''}</span>
       </div>
     </div>`;
@@ -536,7 +537,12 @@ async function openDetail(productId, name){
   stores.sort((a,b) => a.price - b.price);
   currentProductUnit = stores[0]?.unit || 'unidad';
   currentProductImage = product?.image_url || '';
-  document.getElementById('detail-stores').innerHTML = stores.map(s => `
+  document.getElementById('detail-stores').innerHTML = stores.map(s => {
+    const unit = s.unit || 'unidad';
+    const isWeight = unit !== 'unidad';
+    const step = isWeight ? 0.5 : 1;
+    const min = isWeight ? 0.01 : 1;
+    return `
     <div class="store-option">
       <div>
         <div class="store-name">${s.store_name}</div>
@@ -544,39 +550,76 @@ async function openDetail(productId, name){
         ${s.offers_delivery ? '<span class="badge">Ofrece domicilio</span>' : ''}
       </div>
       <div class="price-col">
-        <div class="price">$${s.price.toLocaleString('es-CO')}</div>
-        <div class="stock">${s.stock} disponibles</div>
+        <div class="price">$${s.price.toLocaleString('es-CO')} / ${unit}</div>
+        <div class="stock">${formatQuantity(s.stock)} ${unit} disponibles</div>
         <div class="quantity-control">
-          <button type="button" onclick="changeQuantity(${s.store_id}, -1, ${s.stock})">−</button>
-          <input type="number" id="quantity-${s.store_id}" min="1" max="${s.stock}" value="1" aria-label="Cantidad">
-          <button type="button" onclick="changeQuantity(${s.store_id}, 1, ${s.stock})">+</button>
+          <button type="button" onclick="changeQuantity(${s.store_id}, -${step}, ${s.stock}, ${s.price}, '${unit}')">−</button>
+          <input type="number" id="quantity-${s.store_id}" min="${min}" max="${s.stock}" step="${isWeight ? '0.0001' : '1'}" value="1" aria-label="Cantidad (${unit})" oninput="onDetailQuantityInput(${s.store_id}, ${s.price})">
+          <span style="font-size:11px;color:var(--muted);">${unit}</span>
+          <button type="button" onclick="changeQuantity(${s.store_id}, ${step}, ${s.stock}, ${s.price}, '${unit}')">+</button>
         </div>
-        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '').replace(/"/g, '&quot;')}, ${Boolean(s.offers_delivery)})">Agregar</button>
+        ${isWeight ? `
+        <div style="margin-top:6px;display:flex;align-items:center;justify-content:flex-end;gap:4px;">
+          <span style="font-size:11px;color:var(--muted);">Valor $:</span>
+          <input type="number" id="amount-${s.store_id}" min="100" step="100" value="${Math.round(s.price)}" placeholder="Ej: 7000" style="width:86px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="onDetailAmountInput(${s.store_id}, ${s.price}, ${s.stock})">
+        </div>` : ''}
+        <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '').replace(/"/g, '&quot;')}, ${Boolean(s.offers_delivery)}, '${unit}')">Agregar</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 function closeDetail(){ document.getElementById('detail-overlay').style.display = 'none'; }
 
-function changeQuantity(storeId, amount, max){
+function changeQuantity(storeId, amount, max, price, unit){
   const input = document.getElementById(`quantity-${storeId}`);
-  input.value = Math.min(max, Math.max(1, parseInt(input.value || 1) + amount));
+  const isWeight = unit && unit !== 'unidad';
+  const minVal = isWeight ? 0.1 : 1;
+  const current = parseFloat(input.value || 1);
+  const next = Math.min(max, Math.max(minVal, Number((current + amount).toFixed(4))));
+  input.value = next;
+  const amountInput = document.getElementById(`amount-${storeId}`);
+  if(amountInput && price) amountInput.value = Math.round(next * price);
 }
 
-function addToCart(productId, name, storeId, storeName, price, quantity, stock, storeAddress, offersDelivery){
-  quantity = parseInt(quantity, 10);
-  if(!Number.isInteger(quantity) || quantity < 1){ alert('La cantidad debe ser mayor que cero'); return; }
+function onDetailQuantityInput(storeId, price){
+  const qty = parseFloat(document.getElementById(`quantity-${storeId}`).value);
+  const amountInput = document.getElementById(`amount-${storeId}`);
+  if(amountInput && Number.isFinite(qty) && qty > 0 && price > 0){
+    amountInput.value = Math.round(qty * price);
+  }
+}
+
+function onDetailAmountInput(storeId, price, maxStock){
+  const amount = parseFloat(document.getElementById(`amount-${storeId}`).value);
+  const qtyInput = document.getElementById(`quantity-${storeId}`);
+  if(qtyInput && Number.isFinite(amount) && amount > 0 && price > 0){
+    const calcQty = Math.min(maxStock, amount / price);
+    qtyInput.value = Number(calcQty.toFixed(4));
+  }
+}
+
+function addToCart(productId, name, storeId, storeName, price, quantity, stock, storeAddress, offersDelivery, unit){
+  const itemUnit = unit || currentProductUnit || 'unidad';
+  const isWeight = itemUnit !== 'unidad';
+  quantity = isWeight ? parseFloat(quantity) : parseInt(quantity, 10);
+  if(!Number.isFinite(quantity) || quantity <= 0 || (!isWeight && !Number.isInteger(quantity))){
+    alert('La cantidad debe ser mayor que cero'); return;
+  }
+  quantity = Number(quantity.toFixed(4));
+  if(quantity > stock + 0.0001){
+    alert(`Solo hay ${formatQuantity(stock)} ${itemUnit} disponibles`); return;
+  }
   if(currentStoreForCart !== null && currentStoreForCart !== storeId){
     if(!confirm(`Tu carrito tiene productos de "${cart[0].store_name}". ¿Vaciar el carrito y comprar en "${storeName}" en su lugar? (Cada tienda gestiona pedidos por separado)`)) return;
     cart = [];
   }
   currentStoreForCart = storeId;
   const existing = cart.find(i => i.product_id === productId);
-  if(existing && existing.quantity + quantity > stock){
-    alert(`Solo quedan ${stock - existing.quantity} unidades disponibles para agregar`); return;
+  if(existing && existing.quantity + quantity > stock + 0.0001){
+    alert(`Solo quedan ${formatQuantity(Math.max(0, stock - existing.quantity))} ${itemUnit} disponibles para agregar`); return;
   }
-  if(existing){ existing.quantity += quantity; }
-  else{ cart.push({product_id: productId, name, quantity, price, stock, unit: currentProductUnit, image_url: currentProductImage, store_id: storeId, store_name: storeName, store_address: storeAddress, offers_delivery: offersDelivery}); }
+  if(existing){ existing.quantity = Number((existing.quantity + quantity).toFixed(4)); }
+  else{ cart.push({product_id: productId, name, quantity, price, stock, unit: itemUnit, image_url: currentProductImage, store_id: storeId, store_name: storeName, store_address: storeAddress, offers_delivery: offersDelivery}); }
   updateCartBar();
   closeDetail();
 }
@@ -585,8 +628,8 @@ function updateCartBar(){
   const bar = document.getElementById('cart-bar');
   if(cart.length === 0){ bar.style.display = 'none'; persistCart(); return; }
   bar.style.display = 'flex';
-  const count = cart.reduce((s,i) => s + i.quantity, 0);
-  const total = cart.reduce((s,i) => s + i.quantity * i.price, 0);
+  const count = cart.length;
+  const total = Math.round(cart.reduce((s,i) => s + i.quantity * i.price, 0));
   document.getElementById('cart-count').textContent = `${count} producto${count>1?'s':''} · ${cart[0].store_name}`;
   document.getElementById('cart-total').textContent = `$${total.toLocaleString('es-CO')}`;
   renderCartLines();
@@ -600,7 +643,7 @@ function persistCart(){
 }
 
 function formatQuantity(value){
-  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 2});
+  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 3});
 }
 
 function openCart(){
@@ -620,9 +663,9 @@ function renderCartLines(){
       <div class="cart-line-info"><div class="cart-line-name">${item.name}</div><div class="cart-line-meta">$${item.price.toLocaleString('es-CO')} / ${item.unit || 'unidad'} · ${item.store_name}</div></div>
       <div class="cart-line-quantity"><button onclick="changeCartQuantity(${index}, -1)">−</button><span>${formatQuantity(item.quantity)} ${item.unit || 'un.'}</span><button onclick="changeCartQuantity(${index}, 1)">+</button></div>
       <button class="close-cart" onclick="removeCartItem(${index})" aria-label="Quitar ${item.name}">×</button>
-      <strong class="mono">$${(item.quantity * item.price).toLocaleString('es-CO')}</strong>
+      <strong class="mono">$${Math.round(item.quantity * item.price).toLocaleString('es-CO')}</strong>
     </div>`).join('');
-  const total = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
+  const total = Math.round(cart.reduce((sum, item) => sum + item.quantity * item.price, 0));
   document.getElementById('cart-panel-total').textContent = `$${total.toLocaleString('es-CO')}`;
 }
 
@@ -630,7 +673,7 @@ function changeCartQuantity(index, amount){
   const item = cart[index];
   const nextQuantity = item.quantity + (item.unit && item.unit !== 'unidad' ? amount * 0.5 : amount);
   if(nextQuantity <= 0){ cart.splice(index, 1); }
-  else if(nextQuantity <= item.stock){ item.quantity = Number(nextQuantity.toFixed(2)); }
+  else if(nextQuantity <= item.stock){ item.quantity = Number(nextQuantity.toFixed(4)); }
   updateCartBar();
   if(!cart.length) closeCart();
 }
@@ -643,7 +686,7 @@ function removeCartItem(index){
 }
 
 function openCheckout(){
-  const total = cart.reduce((s,i) => s + i.quantity * i.price, 0);
+  const total = Math.round(cart.reduce((s,i) => s + i.quantity * i.price, 0));
   const selectedStore = cart[0] || {};
   const offersDelivery = selectedStore.offers_delivery !== false;
   const defaultName = (customerProfile && customerProfile.name) || '';
@@ -654,7 +697,7 @@ function openCheckout(){
     <h3>Confirmar pedido</h3>
     <div class="tracking-location" style="margin:8px 0 14px;"><strong>${selectedStore.store_name || 'Tienda seleccionada'}</strong><br>${selectedStore.store_address || 'Dirección no registrada'}${offersDelivery ? '<br><span style="color:var(--green);">Ofrece domicilio</span>' : '<br><span style="color:var(--muted);">Solo recoge en tienda</span>'}</div>
     <div style="margin-bottom:14px;">
-      ${cart.map(i => `<div class="cart-item-row"><span>${i.quantity}x ${i.name}</span><span class="mono">$${(i.quantity*i.price).toLocaleString('es-CO')}</span></div>`).join('')}
+      ${cart.map(i => `<div class="cart-item-row"><span>${formatQuantity(i.quantity)} ${i.unit || 'un.'} x ${i.name}</span><span class="mono">$${Math.round(i.quantity*i.price).toLocaleString('es-CO')}</span></div>`).join('')}
       <div class="cart-item-row" style="font-weight:700;border-bottom:none;"><span>Total</span><span class="mono">$${total.toLocaleString('es-CO')}</span></div>
     </div>
 

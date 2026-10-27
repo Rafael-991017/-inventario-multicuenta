@@ -109,14 +109,14 @@ def create_store_sale(
     if item["stock"] < sale_in.quantity:
         raise HTTPException(400, "Stock insuficiente para esta venta")
 
-    item["stock"] -= sale_in.quantity
+    item["stock"] = round(item["stock"] - sale_in.quantity, 4)
     collection("inventory").document(str(item["id"])).set(item)
     order = {"id": next_id("orders"), "store_id": current_store["id"],
              "customer_name": "Venta presencial", "customer_phone": "N/A",
              "delivery_address": None, "status": "entregado",
-             "total": item["price"] * sale_in.quantity, "items": [{
+             "total": round(item["price"] * sale_in.quantity), "items": [{
                  "product_id": sale_in.product_id, "quantity": sale_in.quantity,
-                 "unit_price": item["price"]}], "created_at": datetime.utcnow()}
+                 "unit_price": item["price"], "unit": item.get("unit", "unidad")}], "created_at": datetime.utcnow()}
     collection("orders").document(str(order["id"])).set(order)
     return order
 
