@@ -408,10 +408,14 @@ async function doLogin(email, password){
   }catch(e){ showError(e.message); }
 }
 
-// El panel no usa localStorage del navegador (no soportado en artifacts);
-// para una app de escritorio real (Electron/Tauri) puedes persistir la
-// sesión con su propio almacenamiento local.
-function localStorage_shim_set(){}
+function localStorage_shim_set(){
+  try{
+    if(TOKEN && STORE){
+      localStorage.setItem('store_token', TOKEN);
+      localStorage.setItem('store_data', JSON.stringify(STORE));
+    }
+  }catch(_e){}
+}
 
 let suppliersList = [];
 let currentProfitPeriod = 'month';
@@ -429,13 +433,15 @@ function saveLocalInventoryMeta(productId, cost_price, supplier){
   }catch(_e){}
 }
 
-function enterApp(){
+function enterApp(initialView){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('sidebar-store-name').textContent = STORE.name;
   loadSuppliers();
   loadInventory();
   loadStoreSummary();
+  const savedView = initialView || localStorage.getItem('store_active_view') || 'inventory';
+  switchView(savedView);
 }
 
 async function loadStoreSummary(){
@@ -533,11 +539,17 @@ async function computeStoreSummary(period = 'all'){
 
 function logout(){
   TOKEN = null; STORE = null;
+  try{
+    localStorage.removeItem('store_token');
+    localStorage.removeItem('store_data');
+    localStorage.removeItem('store_active_view');
+  }catch(_e){}
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 }
 
 function switchView(view){
+  try{ localStorage.setItem('store_active_view', view); }catch(_e){}
   document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view));
   document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
   document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
@@ -545,6 +557,7 @@ function switchView(view){
   document.getElementById('view-profits').style.display = view === 'profits' ? 'block' : 'none';
   document.getElementById('view-suppliers').style.display = view === 'suppliers' ? 'block' : 'none';
   document.getElementById('view-profile').style.display = view === 'profile' ? 'block' : 'none';
+  if(view === 'inventory') loadInventory();
   if(view === 'orders') loadOrders();
   if(view === 'sales') loadSalesForm();
   if(view === 'profits') loadProfits(currentProfitPeriod);
@@ -554,7 +567,11 @@ function switchView(view){
 
 async function authFetch(path, options={}){
   options.headers = Object.assign({}, options.headers, {'Authorization': `Bearer ${TOKEN}`});
-  return fetch(`${API_URL}${path}`, options);
+  const res = await fetch(`${API_URL}${path}`, options);
+  if(res.status === 401){
+    logout();
+  }
+  return res;
 }
 
 function stockClass(stock){
@@ -784,6 +801,7 @@ async function saveProfile(){
   });
   if(!res.ok){ document.getElementById('profile-message').textContent = 'No se pudieron guardar los cambios.'; return; }
   STORE = await res.json();
+  localStorage_shim_set();
   document.getElementById('sidebar-store-name').textContent = STORE.name;
   document.getElementById('profile-message').textContent = 'Cambios guardados correctamente.';
 }
@@ -1098,6 +1116,18 @@ async function updateOrderStatus(orderId, status){
   loadOrders();
   loadStoreSummary();
 }
+
+(function restoreStoreSession(){
+  try{
+    const savedToken = localStorage.getItem('store_token');
+    const savedStore = localStorage.getItem('store_data');
+    if(savedToken && savedStore){
+      TOKEN = savedToken;
+      STORE = JSON.parse(savedStore);
+      enterApp();
+    }
+  }catch(_e){}
+})();
 </script>
 </body>
 </html>
