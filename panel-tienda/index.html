@@ -224,10 +224,10 @@
           <div id="sale-selected" class="sale-selected" style="display:none;"></div>
         </div>
         <div class="sale-quantity-row">
-          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="0.0001" step="1" value="1" oninput="onSaleQuantityChange(this.value)"></div>
+          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="1" step="1" value="1" oninput="onSaleQuantityChange(this.value)"></div>
           <div class="field"><label>Unidad</label><input id="sale-unit-display" value="unidad" readonly></div>
         </div>
-        <div class="field" id="sale-amount-field">
+        <div class="field" id="sale-amount-field" style="display:none;">
           <label id="sale-amount-label">O ingresa el valor vendido en pesos ($)</label>
           <input type="number" id="sale-amount" min="1" step="100" placeholder="Ej: 5500 o 7000" oninput="onSaleAmountChange(this.value)">
           <div id="sale-calc-preview" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
@@ -818,6 +818,7 @@ function formatQuantity(value){
 function selectSaleProduct(productId){
   selectedSaleItem = inventoryItems.find(item => item.product_id === productId);
   const unit = selectedSaleItem.unit || 'unidad';
+  const isWeight = unit !== 'unidad';
   document.getElementById('sale-product-search').value = selectedSaleItem.product.name;
   document.getElementById('sale-suggestions').style.display = 'none';
   document.getElementById('sale-selected').style.display = 'flex';
@@ -826,16 +827,27 @@ function selectSaleProduct(productId){
   document.getElementById('sale-quantity-label').textContent = `Cantidad vendida (${unit})`;
   const input = document.getElementById('sale-quantity');
   input.max = selectedSaleItem.stock;
-  input.step = unit === 'unidad' ? '1' : '0.0001';
-  input.value = unit === 'unidad' ? '1' : '0.5';
+  input.min = isWeight ? '0.01' : '1';
+  input.step = isWeight ? 'any' : '1';
+  input.value = isWeight ? '0.5' : '1';
+  const amountField = document.getElementById('sale-amount-field');
   const amountInput = document.getElementById('sale-amount');
-  const defaultQty = parseFloat(input.value) || 0;
-  amountInput.value = selectedSaleItem.price ? Math.round(defaultQty * selectedSaleItem.price) : '';
-  updateSalePreview();
+  if(isWeight){
+    amountField.style.display = 'block';
+    const defaultQty = parseFloat(input.value) || 0;
+    amountInput.value = selectedSaleItem.price ? Math.round(defaultQty * selectedSaleItem.price) : '';
+    updateSalePreview();
+  } else {
+    amountField.style.display = 'none';
+    amountInput.value = '';
+    document.getElementById('sale-calc-preview').textContent = '';
+  }
 }
 
 function onSaleQuantityChange(val){
   if(!selectedSaleItem) return;
+  const unit = selectedSaleItem.unit || 'unidad';
+  if(unit === 'unidad') return;
   const qty = parseFloat(val);
   const amountInput = document.getElementById('sale-amount');
   if(Number.isFinite(qty) && qty > 0 && selectedSaleItem.price > 0){
@@ -848,6 +860,8 @@ function onSaleQuantityChange(val){
 
 function onSaleAmountChange(val){
   if(!selectedSaleItem || !selectedSaleItem.price) return;
+  const unit = selectedSaleItem.unit || 'unidad';
+  if(unit === 'unidad') return;
   const amount = parseFloat(val);
   const qtyInput = document.getElementById('sale-quantity');
   if(Number.isFinite(amount) && amount > 0){
@@ -862,7 +876,7 @@ function onSaleAmountChange(val){
 function updateSalePreview(){
   const preview = document.getElementById('sale-calc-preview');
   if(!preview) return;
-  if(!selectedSaleItem){ preview.textContent = ''; return; }
+  if(!selectedSaleItem || (selectedSaleItem.unit || 'unidad') === 'unidad'){ preview.textContent = ''; return; }
   const unit = selectedSaleItem.unit || 'unidad';
   const qty = parseFloat(document.getElementById('sale-quantity').value) || 0;
   const total = Math.round(qty * selectedSaleItem.price);
@@ -875,21 +889,28 @@ function updateSalePreview(){
 }
 
 async function registerSale(){
-  const quantity = parseFloat(document.getElementById('sale-quantity').value);
-  if(!selectedSaleItem || !Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock + 0.0001){
-    alert('Indica una cantidad o valor válido dentro del stock disponible'); return;
+  if(!selectedSaleItem){ alert('Selecciona un producto primero'); return; }
+  const unit = selectedSaleItem.unit || 'unidad';
+  const isWeight = unit !== 'unidad';
+  const rawVal = document.getElementById('sale-quantity').value;
+  const quantity = isWeight ? parseFloat(rawVal) : parseInt(rawVal, 10);
+  if(!Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock + 0.0001){
+    alert('Indica una cantidad válida dentro del stock disponible'); return;
   }
-  const safeQuantity = Math.min(quantity, selectedSaleItem.stock);
+  const safeQuantity = isWeight ? Math.min(quantity, selectedSaleItem.stock) : Math.round(Math.min(quantity, selectedSaleItem.stock));
   const res = await authFetch('/stores/me/sales', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity: Number(safeQuantity.toFixed(4)), unit: selectedSaleItem.unit || 'unidad'})
+    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity: Number(safeQuantity.toFixed(4)), unit})
   });
   if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
   const sale = await res.json();
-  const unit = selectedSaleItem.unit || 'unidad';
   document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada (${formatQuantity(safeQuantity)} ${unit} · $${Math.round(sale.total).toLocaleString('es-CO')}). Stock actualizado.`;
-  document.getElementById('sale-quantity').value = 1;
+  const qtyInput = document.getElementById('sale-quantity');
+  qtyInput.min = '1';
+  qtyInput.step = '1';
+  qtyInput.value = '1';
   document.getElementById('sale-amount').value = '';
+  document.getElementById('sale-amount-field').style.display = 'none';
   document.getElementById('sale-calc-preview').textContent = '';
   document.getElementById('sale-product-search').value = '';
   document.getElementById('sale-selected').style.display = 'none';
