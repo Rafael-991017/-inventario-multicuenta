@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -5,6 +6,17 @@ from .. import schemas, auth
 from ..database import collection, document_data, list_collection, next_id, get_db
 
 router = APIRouter(prefix="/products", tags=["Productos"])
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(d_lat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2
+    )
+    return 2 * r * math.asin(math.sqrt(a))
 
 
 @router.get("", response_model=List[schemas.ProductOut])
@@ -81,20 +93,37 @@ def update_product_image(
 
 
 @router.get("/{product_id}/availability", response_model=List[schemas.AvailabilityOut])
-def product_availability(product_id: int, db=Depends(get_db)):
+def product_availability(
+    product_id: int,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: float = 5.0,
+    db=Depends(get_db),
+):
     """El endpoint clave para la app del cliente: en qué tiendas hay este
     producto disponible, con precio y stock de cada una."""
     stores = {store["id"]: store for store in list_collection("stores")}
-    return [
-        {
-            "store_id": store["id"], "store_name": store["name"],
-            "address": ", ".join(filter(None, [store.get("address"), store.get("neighborhood"), store.get("municipality"), store.get("department")])), "latitude": store.get("latitude"),
-            "longitude": store.get("longitude"),
+    results = []
+    for item in list_collection("inventory"):
+        if item.get("product_id") != product_id or item.get("stock", 0) <= 0:
+            continue
+        store = stores.get(item.get("store_id"))
+        if not store:
+            continue
+        s_lat = store.get("latitude")
+        s_lng = store.get("longitude")
+        if lat is not None and lng is not None and s_lat is not None and s_lng is not None:
+            if haversine_km(lat, lng, float(s_lat), float(s_lng)) > radius_km:
+                continue
+        results.append({
+            "store_id": store["id"],
+            "store_name": store["name"],
+            "address": ", ".join(filter(None, [store.get("address"), store.get("neighborhood"), store.get("municipality"), store.get("department")])),
+            "latitude": s_lat,
+            "longitude": s_lng,
             "offers_delivery": store.get("offers_delivery", True),
-            "price": item["price"], "stock": item["stock"], "unit": item.get("unit", "unidad"),
-        }
-        for item in list_collection("inventory")
-        if item.get("product_id") == product_id
-        and item.get("stock", 0) > 0
-        and (store := stores.get(item.get("store_id")))
-    ]
+            "price": item["price"],
+            "stock": item["stock"],
+            "unit": item.get("unit", "unidad"),
+        })
+    return results

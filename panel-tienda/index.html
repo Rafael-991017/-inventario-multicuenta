@@ -304,6 +304,9 @@
           <div class="field"><label>Latitud (opcional)</label><input type="number" id="profile-latitude" step="any"></div>
           <div class="field"><label>Longitud (opcional)</label><input type="number" id="profile-longitude" step="any"></div>
         </div>
+        <div style="margin-bottom:14px;">
+          <button type="button" class="btn small secondary" onclick="useCurrentStoreLocation()">📍 Usar mi ubicación GPS actual</button>
+        </div>
         <label class="checkbox-field"><input type="checkbox" id="profile-delivery"> Ofrezco servicio a domicilio</label>
         <button class="btn" onclick="saveProfile()">Guardar cambios</button>
         <p id="profile-message" style="font-size:13px;color:var(--green);margin:12px 0 0;"></p>
@@ -440,8 +443,53 @@ function enterApp(initialView){
   loadSuppliers();
   loadInventory();
   loadStoreSummary();
+  ensureStoreCoordinates();
   const savedView = initialView || localStorage.getItem('store_active_view') || 'inventory';
   switchView(savedView);
+}
+
+function ensureStoreCoordinates(){
+  if(!STORE || (STORE.latitude != null && STORE.longitude != null) || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const latitude = Number(pos.coords.latitude.toFixed(6));
+    const longitude = Number(pos.coords.longitude.toFixed(6));
+    try{
+      const res = await authFetch('/stores/me', {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name: STORE.name,
+          address: STORE.address || null,
+          neighborhood: STORE.neighborhood || null,
+          municipality: STORE.municipality || null,
+          department: STORE.department || null,
+          phone: STORE.phone || null,
+          latitude,
+          longitude,
+          offers_delivery: STORE.offers_delivery !== false
+        })
+      });
+      if(res.ok){
+        STORE = await res.json();
+        localStorage_shim_set();
+      }
+    }catch(_e){}
+  }, () => {}, {enableHighAccuracy:true, timeout:10000});
+}
+
+function useCurrentStoreLocation(){
+  const msg = document.getElementById('profile-message');
+  if(!navigator.geolocation){
+    msg.textContent = 'Tu navegador no soporta geolocalización.';
+    return;
+  }
+  msg.textContent = 'Obteniendo ubicación GPS...';
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('profile-latitude').value = Number(pos.coords.latitude.toFixed(6));
+    document.getElementById('profile-longitude').value = Number(pos.coords.longitude.toFixed(6));
+    msg.textContent = 'Ubicación detectada. Haz clic en "Guardar cambios" para confirmar.';
+  }, () => {
+    msg.textContent = 'No se pudo obtener el GPS. Revisa los permisos de ubicación del navegador.';
+  }, {enableHighAccuracy:true, timeout:10000});
 }
 
 async function loadStoreSummary(){

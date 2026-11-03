@@ -145,13 +145,13 @@
 <header>
   <div class="header-top">
     <div>
-      <span class="eyebrow">Disponibilidad en tiendas cercanas</span>
+      <span class="eyebrow" id="location-status">📍 Radio: productos a menos de 5 km</span>
       <h1>¿Qué estás buscando?</h1>
     </div>
     <div class="user-pill" id="customer-badge" title="Cuenta activa">Cliente</div>
   </div>
   <div class="search-bar">
-    <input type="text" id="search-input" placeholder="Buscar producto..." oninput="onSearch(this.value)">
+    <input type="text" id="search-input" placeholder="Buscar producto en tiendas a menos de 5 km..." oninput="onSearch(this.value)">
   </div>
   <div class="discovery-tools">
     <div class="category-filters" id="category-filters" aria-label="Filtrar por categoría"></div>
@@ -163,6 +163,7 @@
   </div>
   <div class="header-actions">
     <button class="header-action" onclick="window.location.href='perfiles.html'">Cambiar perfil</button>
+    <button class="header-action" onclick="requestCustomerLocation(true)">📍 Actualizar ubicación (5 km)</button>
     <button class="header-action" onclick="openStoresMap()">Tiendas en el mapa</button>
     <button class="header-action" onclick="openOrderHistory()">Mis pedidos</button>
     <button class="header-action" id="track-header-button" onclick="openTracking()" style="display:none;">Seguir pedido</button>
@@ -402,7 +403,7 @@ function enterCustomerApp(){
   loadCustomerSessionData();
   updateCartBar();
   document.getElementById('track-header-button').style.display = lastOrder ? 'block' : 'none';
-  onSearch(document.getElementById('search-input').value || '');
+  initCustomerLocation();
 }
 
 function logoutCustomer(){
@@ -427,6 +428,137 @@ let searchTimer = null;
 let activeCategory = '';
 let sortMode = 'price';
 let productCards = [];
+const NEARBY_RADIUS_KM = 5;
+let customerCoords = null;
+try{
+  customerCoords = JSON.parse(localStorage.getItem('customer_coords') || 'null');
+}catch(_e){ customerCoords = null; }
+
+function calculateDistanceKm(lat1, lon1, lat2, lon2){
+  const R = 6371;
+  const toRad = deg => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function getGeoCache(){
+  try{ return JSON.parse(localStorage.getItem('inventario_geo_cache') || '{}'); }catch(_e){ return {}; }
+}
+function saveGeoCache(cache){
+  try{ localStorage.setItem('inventario_geo_cache', JSON.stringify(cache)); }catch(_e){}
+}
+
+async function geocodeAddressCached(addressText){
+  if(!addressText || !addressText.trim()) return null;
+  const key = addressText.trim().toLowerCase();
+  const cache = getGeoCache();
+  if(cache[key]) return cache[key];
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addressText)}`);
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data) && data.length > 0){
+        const coords = {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
+        cache[key] = coords;
+        saveGeoCache(cache);
+        return coords;
+      }
+    }
+  }catch(_e){}
+  return null;
+}
+
+function updateLocationBanner(){
+  const statusEl = document.getElementById('location-status');
+  if(!statusEl) return;
+  if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
+    statusEl.textContent = `📍 Mostrando productos a menos de ${NEARBY_RADIUS_KM} km de ti`;
+  } else {
+    statusEl.textContent = `📍 Activa tu ubicación para filtrar a ${NEARBY_RADIUS_KM} km`;
+  }
+}
+
+async function initCustomerLocation(){
+  updateLocationBanner();
+  onSearch(document.getElementById('search-input').value || '');
+  requestCustomerLocation(false);
+}
+
+function requestCustomerLocation(showAlert){
+  const statusEl = document.getElementById('location-status');
+  if(!navigator.geolocation){
+    if(showAlert) alert('Tu navegador no soporta geolocalización GPS.');
+    return;
+  }
+  if(statusEl) statusEl.textContent = '📍 Obteniendo tu ubicación GPS...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      customerCoords = {
+        lat: Number(pos.coords.latitude.toFixed(6)),
+        lng: Number(pos.coords.longitude.toFixed(6))
+      };
+      localStorage.setItem('customer_coords', JSON.stringify(customerCoords));
+      updateLocationBanner();
+      loadProducts(document.getElementById('search-input').value || '');
+      if(showAlert){
+        alert(`Ubicación actualizada. Mostrando únicamente productos en tiendas a menos de ${NEARBY_RADIUS_KM} km.`);
+      }
+    },
+    async () => {
+      if(customerProfile && customerProfile.address){
+        const fallback = await geocodeAddressCached(customerProfile.address);
+        if(fallback){
+          customerCoords = fallback;
+          localStorage.setItem('customer_coords', JSON.stringify(customerCoords));
+          updateLocationBanner();
+          loadProducts(document.getElementById('search-input').value || '');
+          return;
+        }
+      }
+      updateLocationBanner();
+      if(showAlert){
+        alert('No se pudo obtener tu ubicación GPS. Permite el acceso a la ubicación en tu navegador.');
+      }
+    },
+    {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000}
+  );
+}
+
+async function filterStoresWithinRadius(stores){
+  if(!Array.isArray(stores) || stores.length === 0) return [];
+  const enriched = await Promise.all(stores.map(async s => {
+    let lat = s.latitude != null ? Number(s.latitude) : null;
+    let lng = s.longitude != null ? Number(s.longitude) : null;
+    if((!Number.isFinite(lat) || !Number.isFinite(lng)) && s.address){
+      const geocoded = await geocodeAddressCached(s.address);
+      if(geocoded){
+        lat = geocoded.lat;
+        lng = geocoded.lng;
+      }
+    }
+    let distance_km = null;
+    if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng) && Number.isFinite(lat) && Number.isFinite(lng)){
+      distance_km = calculateDistanceKm(customerCoords.lat, customerCoords.lng, lat, lng);
+    }
+    return {...s, latitude: lat, longitude: lng, distance_km};
+  }));
+
+  if(!customerCoords || !Number.isFinite(customerCoords.lat) || !Number.isFinite(customerCoords.lng)){
+    return enriched;
+  }
+
+  const anyStoreHasCoords = enriched.some(s => Number.isFinite(s.distance_km));
+  return enriched.filter(s => {
+    if(Number.isFinite(s.distance_km)){
+      return s.distance_km <= NEARBY_RADIUS_KM;
+    }
+    // Si todavía ninguna tienda tiene coordenadas registradas, no ocultar todo el catálogo
+    return !anyStoreHasCoords;
+  });
+}
 
 async function onSearch(q){
   clearTimeout(searchTimer);
@@ -438,16 +570,17 @@ async function loadProducts(q){
   const normalizedQuery = q.trim();
   const endpoint = normalizedQuery.length < 2 ? '/products' : `/products?q=${encodeURIComponent(normalizedQuery)}`;
   const box = document.getElementById('results');
-  box.innerHTML = '<div class="loading-state">Buscando productos...</div>';
+  box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
   try{
     const res = await fetch(`${API_URL}${endpoint}`);
     if(!res.ok) throw new Error('No se pudo consultar el catálogo');
     const products = await res.json();
-    document.getElementById('results-title').textContent = normalizedQuery.length < 2 ? 'Productos disponibles' : `Resultados para "${normalizedQuery}"`;
+    document.getElementById('results-title').textContent = normalizedQuery.length < 2
+      ? `Productos disponibles (a menos de ${NEARBY_RADIUS_KM} km)`
+      : `Resultados para "${normalizedQuery}" (≤ ${NEARBY_RADIUS_KM} km)`;
     activeCategory = '';
     productCards = [];
-    renderCategoryFilters(products);
-    await renderResults(products);
+    await renderResults(products, true);
   }catch(error){
     document.getElementById('results-title').textContent = 'No se pudo conectar';
     box.innerHTML = `<div class="empty-state"><span class="eyebrow">API no disponible</span><p>Revisa tu conexión y vuelve a intentarlo.</p><button class="add-btn" onclick="loadProducts(document.getElementById('search-input').value)">Reintentar</button></div>`;
@@ -457,8 +590,8 @@ async function loadProducts(q){
 function renderCategoryFilters(products){
   const categories = [...new Set(products.map(product => product.category).filter(Boolean))].sort();
   document.getElementById('category-filters').innerHTML = [
-    '<button class="category-chip active" onclick="setCategory(\'\', this)">Todos</button>',
-    ...categories.map(category => `<button class="category-chip" onclick="setCategory(decodeURIComponent('${encodeURIComponent(category)}'), this)">${category}</button>`)
+    `<button class="category-chip ${activeCategory === '' ? 'active' : ''}" onclick="setCategory('', this)">Todos</button>`,
+    ...categories.map(category => `<button class="category-chip ${activeCategory === category ? 'active' : ''}" onclick="setCategory(decodeURIComponent('${encodeURIComponent(category)}'), this)">${category}</button>`)
   ].join('');
 }
 
@@ -466,33 +599,47 @@ function setCategory(category, button){
   activeCategory = category;
   document.querySelectorAll('.category-chip').forEach(chip => chip.classList.remove('active'));
   button.classList.add('active');
-  renderResults(productCards.map(card => card.product));
+  renderResults(productCards.map(card => card.product), false);
 }
 
 function changeSort(sort){
   sortMode = sort;
-  renderResults(productCards.map(card => card.product));
+  renderResults(productCards.map(card => card.product), false);
 }
 
-async function renderResults(products){
+async function renderResults(products, refreshCategories = false){
   const box = document.getElementById('results');
-  if(products.length === 0){
-    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados</span><p>No encontramos ese producto en ninguna tienda.</p></div>`;
+  if(products.length === 0 && productCards.length === 0){
+    renderCategoryFilters([]);
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados cercanos</span><p>No encontramos productos disponibles en tiendas a menos de ${NEARBY_RADIUS_KM} km de tu ubicación.</p></div>`;
     return;
   }
   if(productCards.length === 0){
-    box.innerHTML = '<div class="loading-state">Comprobando disponibilidad...</div>';
-    productCards = await Promise.all(products.map(async p => {
+    box.innerHTML = '<div class="loading-state">Comprobando tiendas a menos de 5 km...</div>';
+    const rawCards = await Promise.all(products.map(async p => {
       let avail = [];
       try{
-        const availRes = await fetch(`${API_URL}/products/${p.id}/availability`);
+        const params = new URLSearchParams();
+        if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
+          params.set('lat', customerCoords.lat);
+          params.set('lng', customerCoords.lng);
+          params.set('radius_km', NEARBY_RADIUS_KM);
+        }
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const availRes = await fetch(`${API_URL}/products/${p.id}/availability${qs}`);
         if(availRes.ok) avail = await availRes.json();
       }catch(_error){}
-      return {product: p, availability: avail};
+      const nearbyAvail = await filterStoresWithinRadius(avail);
+      return {product: p, availability: nearbyAvail};
     }));
+    // Solo mostrar productos que tengan stock en al menos 1 tienda dentro de los 5 km
+    productCards = rawCards.filter(card => card.availability.length > 0);
+    if(refreshCategories){
+      renderCategoryFilters(productCards.map(card => card.product));
+    }
   }
   const visibleCards = productCards
-    .filter(card => !activeCategory || card.product.category === activeCategory)
+    .filter(card => card.availability.length > 0 && (!activeCategory || card.product.category === activeCategory))
     .sort((a, b) => {
       if(sortMode === 'name') return a.product.name.localeCompare(b.product.name);
       if(sortMode === 'stores') return b.availability.length - a.availability.length;
@@ -501,27 +648,23 @@ async function renderResults(products){
       return priceA - priceB;
     });
   if(visibleCards.length === 0){
-    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados</span><p>No hay productos en esta categoría.</p></div>`;
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin productos a menos de ${NEARBY_RADIUS_KM} km</span><p>No hay productos disponibles en tiendas dentro de un radio de ${NEARBY_RADIUS_KM} km alrededor de ti.</p></div>`;
     return;
   }
 
   box.innerHTML = visibleCards.map(c => {
-    if(c.availability.length === 0){
-      return `<div class="product-card" style="opacity:.5;">
-        <img class="product-image" src="${c.product.image_url || 'https://placehold.co/600x400/e9eef4/718096?text=Sin+imagen'}" alt="${c.product.name}">
-        <h3>${c.product.name}</h3><div class="cat">${c.product.category||''}</div>
-        <div class="best-price"><span class="store-count">Sin stock en ninguna tienda</span></div>
-      </div>`;
-    }
     const cheapest = c.availability.reduce((a,b) => a.price < b.price ? a : b);
     const unitLabel = cheapest.unit && cheapest.unit !== 'unidad' ? ` / ${cheapest.unit}` : '';
+    const distances = c.availability.map(s => s.distance_km).filter(d => Number.isFinite(d));
+    const minDist = distances.length ? Math.min(...distances) : null;
+    const distLabel = minDist !== null ? ` · 📍 ${minDist.toFixed(1)} km` : '';
     return `<div class="product-card" onclick="openDetail(${c.product.id}, '${c.product.name.replace(/'/g,"")}')">
       <img class="product-image" src="${c.product.image_url || 'https://placehold.co/600x400/e9eef4/718096?text=Sin+imagen'}" alt="${c.product.name}">
       <h3>${c.product.name}</h3>
       <div class="cat">${c.product.category || ''}</div>
       <div class="best-price">
         <span class="price">Desde $${cheapest.price.toLocaleString('es-CO')}${unitLabel}</span>
-        <span class="store-count">${c.availability.length} tienda${c.availability.length>1?'s':''}</span>
+        <span class="store-count">${c.availability.length} tienda${c.availability.length>1?'s':''}${distLabel}</span>
       </div>
     </div>`;
   }).join('');
@@ -530,31 +673,44 @@ async function renderResults(products){
 async function openDetail(productId, name){
   document.getElementById('detail-name').textContent = name;
   document.getElementById('detail-overlay').style.display = 'block';
-  const res = await fetch(`${API_URL}/products/${productId}/availability`);
-  const stores = await res.json();
+  const params = new URLSearchParams();
+  if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
+    params.set('lat', customerCoords.lat);
+    params.set('lng', customerCoords.lng);
+    params.set('radius_km', NEARBY_RADIUS_KM);
+  }
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_URL}/products/${productId}/availability${qs}`);
+  const rawStores = await res.json();
+  const stores = await filterStoresWithinRadius(rawStores);
   const productRes = await fetch(`${API_URL}/products/${productId}`);
   const product = productRes.ok ? await productRes.json() : null;
   stores.sort((a,b) => a.price - b.price);
   currentProductUnit = stores[0]?.unit || 'unidad';
   currentProductImage = product?.image_url || '';
+  if(stores.length === 0){
+    document.getElementById('detail-stores').innerHTML = `<div class="empty-state"><span class="eyebrow">Fuera de rango</span><p>No hay tiendas dentro de ${NEARBY_RADIUS_KM} km con este producto.</p></div>`;
+    return;
+  }
   document.getElementById('detail-stores').innerHTML = stores.map(s => {
     const unit = s.unit || 'unidad';
     const isWeight = unit !== 'unidad';
     const step = isWeight ? 0.5 : 1;
     const min = isWeight ? 0.01 : 1;
+    const distBadge = Number.isFinite(s.distance_km) ? `<span class="badge" style="margin-right:6px;">📍 A ${s.distance_km.toFixed(1)} km</span>` : '';
     return `
     <div class="store-option">
       <div>
         <div class="store-name">${s.store_name}</div>
         <div class="store-addr">${s.address || ''}</div>
-        ${s.offers_delivery ? '<span class="badge">Ofrece domicilio</span>' : ''}
+        ${distBadge}${s.offers_delivery ? '<span class="badge">Ofrece domicilio</span>' : ''}
       </div>
       <div class="price-col">
         <div class="price">$${s.price.toLocaleString('es-CO')} / ${unit}</div>
         <div class="stock">${formatQuantity(s.stock)} ${unit} disponibles</div>
         <div class="quantity-control">
           <button type="button" onclick="changeQuantity(${s.store_id}, -${step}, ${s.stock}, ${s.price}, '${unit}')">−</button>
-          <input type="number" id="quantity-${s.store_id}" min="${min}" max="${s.stock}" step="${isWeight ? '0.0001' : '1'}" value="1" aria-label="Cantidad (${unit})" oninput="onDetailQuantityInput(${s.store_id}, ${s.price})">
+          <input type="number" id="quantity-${s.store_id}" min="${min}" max="${s.stock}" step="${isWeight ? 'any' : '1'}" value="1" aria-label="Cantidad (${unit})" oninput="onDetailQuantityInput(${s.store_id}, ${s.price})">
           <span style="font-size:11px;color:var(--muted);">${unit}</span>
           <button type="button" onclick="changeQuantity(${s.store_id}, ${step}, ${s.stock}, ${s.price}, '${unit}')">+</button>
         </div>
@@ -860,20 +1016,24 @@ async function renderTracking(){
 async function openStoresMap(){
   document.getElementById('stores-map-modal').style.display = 'block';
   const list = document.getElementById('stores-map-list');
-  list.innerHTML = '<div class="loading-state">Buscando tiendas...</div>';
+  list.innerHTML = '<div class="loading-state">Buscando tiendas a menos de 5 km...</div>';
   try{
     const res = await fetch(`${API_URL}/stores`);
     if(!res.ok) throw new Error('No se pudieron cargar las tiendas');
-    const stores = await res.json();
-    if(!stores.length){ list.innerHTML = '<div class="empty-state"><p>No hay tiendas registradas todavía.</p></div>'; return; }
+    const rawStores = await res.json();
+    const mappedStores = rawStores.map(store => ({
+      ...store,
+      address: [store.address, store.neighborhood, store.municipality, store.department].filter(Boolean).join(', ')
+    }));
+    const stores = await filterStoresWithinRadius(mappedStores);
+    if(!stores.length){ list.innerHTML = `<div class="empty-state"><p>No hay tiendas registradas dentro de ${NEARBY_RADIUS_KM} km de tu ubicación.</p></div>`; return; }
     const first = stores.find(store => store.latitude && store.longitude) || stores[0];
-    const firstAddress = [first.address, first.neighborhood, first.municipality, first.department].filter(Boolean).join(', ');
-    const query = first.latitude && first.longitude ? `${first.latitude},${first.longitude}` : (firstAddress || 'tiendas');
+    const query = first.latitude && first.longitude ? `${first.latitude},${first.longitude}` : (first.address || 'tiendas');
     document.getElementById('stores-map-frame').src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
     list.innerHTML = stores.map(store => {
-      const fullAddress = [store.address, store.neighborhood, store.municipality, store.department].filter(Boolean).join(', ');
-      const storeQuery = store.latitude && store.longitude ? `${store.latitude},${store.longitude}` : (fullAddress || store.name);
-      return `<div class="store-map-card"><div><h3>${store.name}</h3><p>${fullAddress || 'Dirección no registrada'}${store.phone ? `<br>Contacto: ${store.phone}` : ''}</p></div><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeQuery)}" target="_blank" rel="noopener">Abrir mapa</a></div>`;
+      const storeQuery = store.latitude && store.longitude ? `${store.latitude},${store.longitude}` : (store.address || store.name);
+      const distText = Number.isFinite(store.distance_km) ? ` · 📍 a ${store.distance_km.toFixed(1)} km` : '';
+      return `<div class="store-map-card"><div><h3>${store.name}${distText}</h3><p>${store.address || 'Dirección no registrada'}${store.phone ? `<br>Contacto: ${store.phone}` : ''}</p></div><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeQuery)}" target="_blank" rel="noopener">Abrir mapa</a></div>`;
     }).join('');
   }catch(error){ list.innerHTML = `<div class="empty-state"><p>${error.message}</p></div>`; }
 }
