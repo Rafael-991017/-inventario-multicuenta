@@ -232,6 +232,9 @@ try{
   customerProfile = null;
 }
 const LOCAL_CUSTOMERS_KEY = 'inventario_customer_accounts';
+const CATALOG_CACHE_KEY = 'inventario_catalog_cache';
+// Despertar el servidor en segundo plano apenas carga la página
+fetch(`${API_URL}/`).catch(() => {});
 
 let cart = [];
 let currentStoreForCart = null;
@@ -316,6 +319,44 @@ async function submitCustomerAuth(){
   }
 
   submitBtn.disabled = true;
+  const originalBtnText = submitBtn.textContent;
+  submitBtn.textContent = 'Entrando...';
+
+  // Inicio de sesión instantáneo si el cliente ya inició sesión antes en este equipo
+  if(!isCustomerRegister){
+    const cachedAccount = getLocalCustomers().find(acc => acc.email === email && acc.password === password);
+    if(cachedAccount){
+      customerToken = customerToken || `local-token-${cachedAccount.id}`;
+      customerProfile = {
+        id: cachedAccount.id,
+        name: cachedAccount.name,
+        email: cachedAccount.email,
+        phone: cachedAccount.phone,
+        address: cachedAccount.address || null
+      };
+      localStorage.setItem('customer_token', customerToken);
+      localStorage.setItem('customer_profile', JSON.stringify(customerProfile));
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalBtnText;
+      enterCustomerApp();
+      // Sincronizar token real con Render en segundo plano sin bloquear al usuario
+      fetch(`${API_URL}/auth/customer/login`, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:`username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+      }).then(async r => {
+        if(r.ok){
+          const d = await r.json();
+          customerToken = d.access_token;
+          customerProfile = d.customer;
+          localStorage.setItem('customer_token', customerToken);
+          localStorage.setItem('customer_profile', JSON.stringify(customerProfile));
+        }
+      }).catch(() => {});
+      return;
+    }
+  }
+
   try{
     let usedLocalFallback = false;
     if(isCustomerRegister){
@@ -395,6 +436,7 @@ async function submitCustomerAuth(){
     errorBox.textContent = err.message || 'No se pudo iniciar sesión';
   }finally{
     submitBtn.disabled = false;
+    submitBtn.textContent = isCustomerRegister ? 'Crear cuenta' : 'Entrar';
   }
 }
 
@@ -454,24 +496,32 @@ function saveGeoCache(cache){
   try{ localStorage.setItem('inventario_geo_cache', JSON.stringify(cache)); }catch(_e){}
 }
 
+const inflightGeoRequests = {};
 async function geocodeAddressCached(addressText){
   if(!addressText || !addressText.trim()) return null;
   const key = addressText.trim().toLowerCase();
   const cache = getGeoCache();
   if(cache[key]) return cache[key];
-  try{
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addressText)}`);
-    if(res.ok){
-      const data = await res.json();
-      if(Array.isArray(data) && data.length > 0){
-        const coords = {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
-        cache[key] = coords;
-        saveGeoCache(cache);
-        return coords;
+  if(inflightGeoRequests[key]) return inflightGeoRequests[key];
+  inflightGeoRequests[key] = (async () => {
+    try{
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addressText)}`);
+      if(res.ok){
+        const data = await res.json();
+        if(Array.isArray(data) && data.length > 0){
+          const coords = {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
+          const latestCache = getGeoCache();
+          latestCache[key] = coords;
+          saveGeoCache(latestCache);
+          return coords;
+        }
       }
-    }
-  }catch(_e){}
-  return null;
+    }catch(_e){}
+    return null;
+  })();
+  const result = await inflightGeoRequests[key];
+  delete inflightGeoRequests[key];
+  return result;
 }
 
 function updateLocationBanner(){
@@ -571,10 +621,57 @@ async function onSearch(q){
 
 async function loadProducts(q){
   const normalizedQuery = q.trim();
-  const endpoint = normalizedQuery.length < 2 ? '/products' : `/products?q=${encodeURIComponent(normalizedQuery)}`;
   const box = document.getElementById('results');
-  box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+
+  // Mostrar caché instantáneamente mientras actualiza en segundo plano
+  if(normalizedQuery.length < 2 && productCards.length === 0){
+    try{
+      const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || '[]');
+      if(Array.isArray(cached) && cached.length > 0){
+        productCards = cached;
+        renderCategoryFilters(productCards.map(c => c.product));
+        await renderResults(productCards.map(c => c.product), false);
+      } else {
+        box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+      }
+    }catch(_e){
+      box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+    }
+  } else if(productCards.length === 0){
+    box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+  }
+
   try{
+    const params = new URLSearchParams();
+    if(normalizedQuery.length >= 2) params.set('q', normalizedQuery);
+    if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
+      params.set('lat', customerCoords.lat);
+      params.set('lng', customerCoords.lng);
+      params.set('radius_km', NEARBY_RADIUS_KM);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    // Intentar primero el endpoint unificado rápido (/products/catalog)
+    const catRes = await fetch(`${API_URL}/products/catalog${qs}`);
+    if(catRes.ok){
+      const catalogData = await catRes.json();
+      const filteredCards = await Promise.all(catalogData.map(async entry => ({
+        product: entry.product,
+        availability: await filterStoresWithinRadius(entry.availability || [])
+      })));
+      productCards = filteredCards.filter(card => card.availability.length > 0);
+      if(normalizedQuery.length < 2){
+        try{ localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(productCards)); }catch(_e){}
+      }
+      document.getElementById('results-title').textContent = normalizedQuery.length < 2
+        ? `Productos disponibles (a menos de ${NEARBY_RADIUS_KM} km)`
+        : `Resultados para "${normalizedQuery}" (≤ ${NEARBY_RADIUS_KM} km)`;
+      renderCategoryFilters(productCards.map(c => c.product));
+      await renderResults(productCards.map(c => c.product), false);
+      return;
+    }
+
+    const endpoint = normalizedQuery.length < 2 ? '/products' : `/products?q=${encodeURIComponent(normalizedQuery)}`;
     const res = await fetch(`${API_URL}${endpoint}`);
     if(!res.ok) throw new Error('No se pudo consultar el catálogo');
     const products = await res.json();
@@ -584,9 +681,14 @@ async function loadProducts(q){
     activeCategory = '';
     productCards = [];
     await renderResults(products, true);
+    if(normalizedQuery.length < 2 && productCards.length > 0){
+      try{ localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(productCards)); }catch(_e){}
+    }
   }catch(error){
-    document.getElementById('results-title').textContent = 'No se pudo conectar';
-    box.innerHTML = `<div class="empty-state"><span class="eyebrow">API no disponible</span><p>Revisa tu conexión y vuelve a intentarlo.</p><button class="add-btn" onclick="loadProducts(document.getElementById('search-input').value)">Reintentar</button></div>`;
+    if(productCards.length === 0){
+      document.getElementById('results-title').textContent = 'No se pudo conectar';
+      box.innerHTML = `<div class="empty-state"><span class="eyebrow">Despertando servidor...</span><p>El servidor gratuito estaba en reposo. Intenta de nuevo en unos segundos.</p><button class="add-btn" onclick="loadProducts(document.getElementById('search-input').value)">Reintentar</button></div>`;
+    }
   }
 }
 

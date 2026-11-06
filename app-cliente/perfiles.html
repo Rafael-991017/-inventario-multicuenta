@@ -41,6 +41,8 @@
   <p class="note" id="store-note">Los paneles de tienda y administrador están adaptados tanto para computador como para móvil.</p>
 </main>
 <script>
+// Despertar el servidor de Render en segundo plano apenas se abre la pantalla inicial
+fetch('https://vent-fast-yxui.onrender.com/').catch(() => {});
 function go(path){ window.location.href = path; }
 </script>
 </body>

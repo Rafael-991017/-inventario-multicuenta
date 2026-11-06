@@ -19,6 +19,57 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+@router.get("/catalog")
+def list_catalog_with_availability(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: float = 5.0,
+    db=Depends(get_db),
+):
+    """Devuelve todos los productos junto con su disponibilidad en tiendas en una sola petición rápida."""
+    products = [
+        product for product in list_collection("products")
+        if (not q or q.lower() in product.get("name", "").lower())
+        and (not category or product.get("category") == category)
+    ]
+    stores = {store["id"]: store for store in list_collection("stores")}
+    avail_by_product = {}
+
+    for item in list_collection("inventory"):
+        pid = item.get("product_id")
+        if not pid or item.get("stock", 0) <= 0:
+            continue
+        store = stores.get(item.get("store_id"))
+        if not store:
+            continue
+        s_lat = store.get("latitude")
+        s_lng = store.get("longitude")
+        if lat is not None and lng is not None and s_lat is not None and s_lng is not None:
+            if haversine_km(lat, lng, float(s_lat), float(s_lng)) > radius_km:
+                continue
+        avail_by_product.setdefault(pid, []).append({
+            "store_id": store["id"],
+            "store_name": store["name"],
+            "address": ", ".join(filter(None, [store.get("address"), store.get("neighborhood"), store.get("municipality"), store.get("department")])),
+            "latitude": s_lat,
+            "longitude": s_lng,
+            "offers_delivery": store.get("offers_delivery", True),
+            "price": item["price"],
+            "stock": item["stock"],
+            "unit": item.get("unit", "unidad"),
+        })
+
+    return [
+        {
+            "product": p,
+            "availability": avail_by_product.get(p["id"], []),
+        }
+        for p in products
+    ]
+
+
 @router.get("", response_model=List[schemas.ProductOut])
 def list_products(q: Optional[str] = None, category: Optional[str] = None, db=Depends(get_db)):
     return [
