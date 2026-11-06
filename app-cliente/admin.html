@@ -67,14 +67,34 @@
   .pill-rechazado{background:#F8E5E3;color:var(--red)}
   .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
 
-  @media(max-width:760px){
-    .sidebar{width:76px}
-    .sidebar .brand .eyebrow,.sidebar .brand .title,.nav-item{font-size:0}
-    .nav-item{padding:16px 0;text-align:center}
-    .nav-item::first-letter{font-size:18px}
-    main{margin-left:76px;padding:20px 14px}
+  @media(max-width:768px){
+    .sidebar{
+      position:sticky;top:0;left:0;right:0;bottom:auto;width:100%;z-index:30;
+      flex-direction:row;align-items:center;overflow-x:auto;padding:10px 12px;gap:6px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);scrollbar-width:none;
+    }
+    .sidebar::-webkit-scrollbar{display:none}
+    .sidebar .brand{
+      padding:0 12px 0 4px;border-bottom:none;border-right:1px solid rgba(255,255,255,.15);
+      margin-right:4px;flex:0 0 auto;
+    }
+    .sidebar .brand .eyebrow{display:none}
+    .sidebar .brand .title{font-size:14px;white-space:nowrap}
+    .nav-item{
+      flex:0 0 auto;padding:8px 13px;font-size:13px;border-left:none;
+      border-radius:999px;white-space:nowrap;
+    }
+    .nav-item.active{background:var(--amber);color:var(--navy);border-left:none}
+    .nav-item.logout{
+      margin-top:0;border-top:none;padding:8px 13px;
+      border:1px solid rgba(255,255,255,.2);
+    }
+    main{margin-left:0;padding:20px 14px}
     .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     table{display:block;overflow-x:auto;white-space:nowrap}
+  }
+  @media(max-width:480px){
+    .summary-grid{grid-template-columns:1fr}
   }
 </style>
 </head>

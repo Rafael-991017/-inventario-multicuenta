@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Tienda · Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A41;
+    --navy-light:#28405e;
+    --cream:#F7F5F0;
+    --paper:#FFFFFF;
+    --amber:#E0A458;
+    --amber-dark:#C4863C;
+    --green:#3F6C51;
+    --red:#B14A42;
+    --ink:#1B2A41;
+    --muted:#6B7280;
+    --line:#E4E0D6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink);}
+  h1,h2,h3{font-family:'Sora',sans-serif;margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* ---------- Login ---------- */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);}
+  .login-card{background:var(--paper);padding:48px 40px;border-radius:4px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .login-card h1{font-size:22px;color:var(--navy);margin-bottom:4px;}
+  .login-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-dark);margin-bottom:14px;display:block;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500;}
+  .field input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-family:inherit;background:var(--cream);}
+  .field input:focus{outline:none;border-color:var(--navy);}
+  button.primary{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;}
+  button.primary:hover{background:var(--navy-light);}
+  button.secondary-login{width:100%;padding:11px 12px;margin-top:10px;background:transparent;color:var(--navy);border:1.5px solid var(--line);border-radius:3px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  button.secondary-login:hover{background:var(--cream);border-color:var(--amber-dark);}
+  .toggle-mode{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
+  .toggle-mode a{color:var(--amber-dark);cursor:pointer;text-decoration:none;font-weight:600;}
+  .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+  .api-config{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);}
+  .api-config input{font-size:11px;color:var(--muted);}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--navy);color:#fff;padding:28px 0;}
+  .sidebar .brand{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px;}
+  .sidebar .brand .store-name{font-family:'Sora',sans-serif;font-weight:600;font-size:16px;}
+  .sidebar .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);opacity:.9;}
+  .nav-item{padding:13px 24px;font-size:14px;cursor:pointer;color:rgba(255,255,255,.75);border-left:3px solid transparent;}
+  .nav-item:hover{color:#fff;}
+  .nav-item.active{color:#fff;border-left-color:var(--amber);background:rgba(255,255,255,.05);font-weight:600;}
+  .nav-item.logout{position:absolute;bottom:24px;width:220px;color:rgba(255,255,255,.5);}
+  main{margin-left:220px;padding:36px 44px;max-width:980px;}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;}
+  .page-header h2{font-size:24px;}
+  .page-header .sub{color:var(--muted);font-size:13px;margin-top:4px;}
+  .btn{padding:10px 18px;background:var(--amber);color:var(--navy);border:none;border-radius:3px;font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .btn:hover{background:var(--amber-dark);}
+  .btn.secondary{background:transparent;border:1.5px solid var(--line);color:var(--ink);}
+  .btn.small{padding:6px 12px;font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:2px solid var(--line);font-weight:600;}
+  td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px;}
+  tr:last-child td{border-bottom:none;}
+  .stock-tag{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;}
+  .stock-dot{width:7px;height:7px;border-radius:50%;}
+  .stock-ok .stock-dot{background:var(--green);} .stock-ok{color:var(--green);}
+  .stock-low .stock-dot{background:var(--amber-dark);} .stock-low{color:var(--amber-dark);}
+  .stock-out .stock-dot{background:var(--red);} .stock-out{color:var(--red);}
+
+  .status-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pendiente{background:#FDF0DD;color:var(--amber-dark);}
+  .status-confirmado{background:#E4EEE8;color:var(--green);}
+  .status-en_camino{background:#E4EEF6;color:#2E5F8A;}
+  .status-entregado{background:#E7F4E9;color:var(--green);}
+  .status-cancelado{background:#FBEAE9;color:var(--red);}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);align-items:center;justify-content:center;z-index:50;}
+  .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;max-height:calc(100vh - 32px);overflow-y:auto;}
+  .modal h3{margin-bottom:18px;font-size:17px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px;}
+  .summary-grid.four-cols{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:16px 18px;}
+  .summary-card .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .summary-card .value{font:700 24px 'IBM Plex Mono',monospace;color:var(--ink);margin-top:8px;}
+  .summary-card.warning .value{color:var(--amber-dark);}
+  .inventory-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;}
+  .inventory-toolbar input{width:260px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;background:var(--paper);font:13px 'Inter',sans-serif;}
+  .inventory-toolbar input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
+  .sale-card{width:100%;max-width:480px;padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:5px;}
+  .sale-search{position:relative;}
+  .sale-search input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:3px;background:var(--paper);font:14px 'Inter',sans-serif;}
+  .sale-search input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
+  .sale-suggestions{position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--paper);border:1px solid var(--line);box-shadow:0 8px 20px rgba(27,42,65,.12);}
+  .sale-suggestion{padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:12px;font-size:13px;}
+  .sale-suggestion:hover{background:var(--cream);}
+  .sale-suggestion small{color:var(--muted);}
+  .sale-selected{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:10px 12px;background:var(--cream);font-size:13px;}
+  .sale-unit{color:var(--green);font-weight:700;}
+  .sale-quantity-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:end;}
+  .profile-card{max-width:620px;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:24px;}
+  .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .profile-grid .field:first-child{grid-column:1/-1;}
+  .checkbox-field{display:flex;align-items:center;gap:8px;margin:4px 0 20px;font-size:13px;color:var(--ink);}
+  .checkbox-field input{width:16px;height:16px;accent-color:var(--green);}
+  @media(max-width:768px){
+    .sidebar{
+      position:sticky;top:0;left:0;right:0;bottom:auto;width:100%;z-index:30;
+      flex-direction:row;align-items:center;overflow-x:auto;padding:10px 12px;gap:6px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);scrollbar-width:none;
+    }
+    .sidebar::-webkit-scrollbar{display:none;}
+    .sidebar .brand{
+      padding:0 12px 0 4px;border-bottom:none;border-right:1px solid rgba(255,255,255,.15);
+      margin-right:4px;flex:0 0 auto;
+    }
+    .sidebar .brand .eyebrow{display:none;}
+    .sidebar .brand .store-name{font-size:14px;white-space:nowrap;}
+    .nav-item{
+      flex:0 0 auto;padding:8px 13px;font-size:13px;border-left:none;
+      border-radius:999px;white-space:nowrap;
+    }
+    .nav-item.active{background:var(--amber);color:var(--navy);border-left:none;}
+    .nav-item.logout{
+      margin-top:0;border-top:none;padding:8px 13px;
+      border:1px solid rgba(255,255,255,.2);
+    }
+    main{margin-left:0;padding:20px 14px;}
+    .page-header{flex-direction:column;align-items:flex-start;gap:12px;}
+    .summary-grid,.summary-grid.four-cols{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .inventory-toolbar{align-items:stretch;flex-direction:column;}
+    .inventory-toolbar input{width:100%;}
+    table{display:block;overflow-x:auto;white-space:nowrap;}
+  }
+  @media(max-width:520px){
+    .profile-grid{grid-template-columns:1fr;}
+    .profile-grid .field:first-child{grid-column:auto;}
+    .summary-grid,.summary-grid.four-cols{grid-template-columns:1fr;}
+    .modal-overlay{padding:12px;align-items:flex-start;overflow-y:auto;}
+    .modal{width:100%;padding:24px 20px;max-height:none;margin:auto 0;}
+  }
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN / REGISTRO ============ -->
+<div id="login-screen">
+  <div class="login-card">
+    <span class="login-eyebrow">Panel de tienda</span>
+    <h1 id="form-title">Inicia sesión</h1>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 20px;">Gestiona tu inventario y pedidos</p>
+
+    <div id="login-form">
+      <div class="field"><label>Correo</label><input type="email" id="login-email" placeholder="tienda@correo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="primary" onclick="login()">Entrar</button>
+    </div>
+
+    <div id="register-form" style="display:none;">
+      <div class="field"><label>Nombre de la tienda</label><input type="text" id="reg-name"></div>
+      <div class="field"><label>Correo</label><input type="email" id="reg-email"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
+      <div class="field"><label>Dirección exacta</label><input type="text" id="reg-address" placeholder="Calle 10 # 20-30"></div>
+      <div class="field"><label>Barrio</label><input type="text" id="reg-neighborhood" placeholder="Nombre del barrio"></div>
+      <div class="field"><label>Municipio</label><input type="text" id="reg-municipality" placeholder="Ciudad o municipio"></div>
+      <div class="field"><label>Departamento</label><input type="text" id="reg-department" placeholder="Departamento"></div>
+      <div class="field"><label>Número de contacto</label><input type="tel" id="reg-phone" placeholder="300 000 0000"></div>
+      <button class="primary" onclick="register()">Crear tienda</button>
+    </div>
+
+    <button class="secondary-login" type="button" onclick="goHomeProfiles()">← Volver al inicio</button>
+
+    <p class="error-msg" id="error-msg"></p>
+    <p class="toggle-mode" id="toggle-text">¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a></p>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+  <div class="sidebar">
+    <div class="brand">
+      <span class="eyebrow">Panel de tienda</span>
+      <div class="store-name" id="sidebar-store-name">—</div>
+    </div>
+    <div class="nav-item active" data-view="inventory" onclick="switchView('inventory')">Inventario</div>
+    <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos</div>
+    <div class="nav-item" data-view="sales" onclick="switchView('sales')">Vender</div>
+    <div class="nav-item" data-view="profits" onclick="switchView('profits')">Ganancias</div>
+    <div class="nav-item" data-view="suppliers" onclick="switchView('suppliers')">Proveedores</div>
+    <div class="nav-item" data-view="profile" onclick="switchView('profile')">Mi tienda</div>
+    <div class="nav-item logout" onclick="logout()">Cerrar sesión</div>
+  </div>
+
+  <main>
+    <!-- Vista Inventario -->
+    <section id="view-inventory">
+      <div class="page-header">
+        <div>
+          <h2>Inventario</h2>
+          <div class="sub">Productos, proveedor, precio de compra, precio de venta y stock disponible</div>
+        </div>
+        <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
+      </div>
+      <div class="summary-grid" aria-label="Resumen del inventario">
+        <div class="summary-card"><div class="label">Productos activos</div><div class="value" id="summary-products">0</div></div>
+        <div class="summary-card"><div class="label">Unidades disponibles</div><div class="value" id="summary-units">0</div></div>
+        <div class="summary-card warning"><div class="label">Stock bajo</div><div class="value" id="summary-low-stock">0</div></div>
+        <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="summary-sales-count">0</div></div>
+        <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta total</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
+      </div>
+      <div class="inventory-toolbar">
+        <strong>Tu catálogo</strong>
+        <input type="search" id="inventory-search" placeholder="Buscar en inventario..." oninput="renderInventory(this.value)">
+      </div>
+      <table>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Compra</th><th>Venta</th><th>Ganancia / u.</th><th>Stock</th><th></th></tr></thead>
+        <tbody id="inventory-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Pedidos -->
+    <section id="view-orders" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Pedidos</h2>
+          <div class="sub">Compras y domicilios recibidos por tu tienda</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Cliente</th><th>Entrega</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Ventas presenciales -->
+    <section id="view-sales" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Vender</h2>
+          <div class="sub">Registra una venta hecha directamente en tu tienda</div>
+        </div>
+      </div>
+      <div class="sale-card">
+        <div class="field">
+          <label>Buscar producto</label>
+          <div class="sale-search">
+            <input type="search" id="sale-product-search" placeholder="Escribe para buscar..." oninput="searchSaleProducts(this.value)" autocomplete="off">
+            <div id="sale-suggestions" class="sale-suggestions" style="display:none;"></div>
+          </div>
+          <div id="sale-selected" class="sale-selected" style="display:none;"></div>
+        </div>
+        <div class="sale-quantity-row">
+          <div class="field"><label id="sale-quantity-label">Cantidad vendida</label><input type="number" id="sale-quantity" min="1" step="1" value="1" oninput="onSaleQuantityChange(this.value)"></div>
+          <div class="field"><label>Unidad</label><input id="sale-unit-display" value="unidad" readonly></div>
+        </div>
+        <div class="field" id="sale-amount-field" style="display:none;">
+          <label id="sale-amount-label">O ingresa el valor vendido en pesos ($)</label>
+          <input type="number" id="sale-amount" min="1" step="100" placeholder="Ej: 5500 o 7000" oninput="onSaleAmountChange(this.value)">
+          <div id="sale-calc-preview" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
+        </div>
+        <button class="btn" onclick="registerSale()">Confirmar venta</button>
+        <p id="sale-message" style="font-size:13px;color:var(--green);margin-top:12px;"></p>
+      </div>
+    </section>
+
+    <!-- Vista Ganancias -->
+    <section id="view-profits" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Ganancias y Reportes</h2>
+          <div class="sub">Compara a cuánto compraste y a cuánto vendiste por día, semana o mes</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn small" id="period-day" onclick="loadProfits('day')">Hoy (Diario)</button>
+          <button class="btn small secondary" id="period-week" onclick="loadProfits('week')">Semanal (7 días)</button>
+          <button class="btn small secondary" id="period-month" onclick="loadProfits('month')">Mensual (30 días)</button>
+          <button class="btn small secondary" id="period-all" onclick="loadProfits('all')">Todo</button>
+        </div>
+      </div>
+      <div class="summary-grid four-cols">
+        <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="profit-sales-count">0</div></div>
+        <div class="summary-card"><div class="label">Ingresos (Ventas)</div><div class="value" id="profit-revenue">$0</div></div>
+        <div class="summary-card warning"><div class="label">Costo (Compra)</div><div class="value" id="profit-cost">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta</div><div class="value" id="profit-net" style="color:var(--green);">$0</div></div>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Cliente / Tipo</th><th>Productos vendidos</th><th>Venta</th><th>Costo compra</th><th>Ganancia</th></tr></thead>
+        <tbody id="profits-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Vista Proveedores -->
+    <section id="view-suppliers" style="display:none;">
+      <div class="page-header">
+        <div>
+          <h2>Proveedores</h2>
+          <div class="sub">Registra tus proveedores para asociarlos a los productos de tu inventario</div>
+        </div>
+      </div>
+      <div class="profile-card" style="margin-bottom:24px;max-width:100%;">
+        <h3 style="margin-bottom:14px;font-size:16px;">Registrar nuevo proveedor</h3>
+        <div class="profile-grid">
+          <div class="field"><label>Nombre de la empresa o proveedor *</label><input type="text" id="sup-name" placeholder="Ej: Lácteos del Caribe / Colanta"></div>
+          <div class="field"><label>Nombre del vendedor / contacto</label><input type="text" id="sup-contact" placeholder="Ej: Carlos Pérez"></div>
+          <div class="field"><label>Teléfono / WhatsApp</label><input type="tel" id="sup-phone" placeholder="300 000 0000"></div>
+          <div class="field"><label>Correo electrónico (opcional)</label><input type="email" id="sup-email" placeholder="proveedor@correo.com"></div>
+          <div class="field" style="grid-column:1/-1;"><label>Productos que suministra / Notas</label><input type="text" id="sup-notes" placeholder="Ej: Queso costeño, suero, leche — visita los martes y viernes"></div>
+        </div>
+        <button class="btn" onclick="saveSupplier()">+ Guardar proveedor</button>
+        <p id="supplier-message" style="font-size:13px;color:var(--green);margin:10px 0 0;"></p>
+      </div>
+      <table>
+        <thead><tr><th>Proveedor</th><th>Contacto</th><th>Teléfono</th><th>Productos / Notas</th><th></th></tr></thead>
+        <tbody id="suppliers-tbody"></tbody>
+      </table>
+    </section>
+
+    <section id="view-profile" style="display:none;">
+      <div class="page-header">
+        <div><h2>Mi tienda</h2><div class="sub">Mantén actualizados tus datos y ubicación</div></div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-grid">
+          <div class="field"><label>Nombre de la tienda</label><input type="text" id="profile-name"></div>
+          <div class="field"><label>Dirección exacta</label><input type="text" id="profile-address" placeholder="Calle 10 # 20-30"></div>
+          <div class="field"><label>Barrio</label><input type="text" id="profile-neighborhood"></div>
+          <div class="field"><label>Municipio</label><input type="text" id="profile-municipality"></div>
+          <div class="field"><label>Departamento</label><input type="text" id="profile-department"></div>
+          <div class="field"><label>Número de contacto</label><input type="tel" id="profile-phone"></div>
+          <div class="field"><label>Latitud (opcional)</label><input type="number" id="profile-latitude" step="any"></div>
+          <div class="field"><label>Longitud (opcional)</label><input type="number" id="profile-longitude" step="any"></div>
+        </div>
+        <div style="margin-bottom:14px;">
+          <button type="button" class="btn small secondary" onclick="useCurrentStoreLocation()">📍 Usar mi ubicación GPS actual</button>
+        </div>
+        <label class="checkbox-field"><input type="checkbox" id="profile-delivery"> Ofrezco servicio a domicilio</label>
+        <button class="btn" onclick="saveProfile()">Guardar cambios</button>
+        <p id="profile-message" style="font-size:13px;color:var(--green);margin:12px 0 0;"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ MODAL: agregar/editar inventario ============ -->
+<div class="modal-overlay" id="inventory-modal">
+  <div class="modal">
+    <h3>Agregar producto al inventario</h3>
+    <div class="field">
+      <label>Buscar producto existente o crear uno nuevo</label>
+      <input type="text" id="modal-product-search" placeholder="Escribe el nombre..." oninput="searchProducts(this.value)">
+      <div id="product-suggestions" style="margin-top:6px;font-size:13px;"></div>
+    </div>
+    <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes, Lácteos"></div>
+    <div class="field">
+      <label>Proveedor</label>
+      <input type="text" id="modal-supplier" list="suppliers-datalist" placeholder="Selecciona o escribe el proveedor...">
+      <datalist id="suppliers-datalist"></datalist>
+    </div>
+    <div class="field"><label>Imagen del producto</label><input type="file" id="modal-image-file" accept="image/*" onchange="previewProductImage(this)"><input type="url" id="modal-image-url" placeholder="O pega una URL de imagen" style="margin-top:6px;"><img id="image-preview" alt="Vista previa" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:4px;margin-top:8px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field"><label>Precio de compra / costo ($)</label><input type="number" id="modal-cost-price" placeholder="Ej: 9000" min="0"></div>
+      <div class="field"><label>Precio de venta ($)</label><input type="number" id="modal-price" placeholder="Ej: 13000" min="0"></div>
+    </div>
+    <div class="field"><label>Stock disponible</label><input type="number" id="modal-stock" placeholder="0" min="0" step="0.01"></div>
+    <div class="field"><label>Tipo de venta</label><select id="modal-unit"><option value="unidad">Por unidad</option><option value="kg">Por kilogramo (kg)</option><option value="lb">Por libra (lb)</option></select></div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn secondary" onclick="closeInventoryModal()" style="flex:1;">Cancelar</button>
+      <button class="btn" onclick="saveInventoryItem()" style="flex:1;">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://vent-fast-yxui.onrender.com';
+let TOKEN = null;
+let STORE = null;
+let selectedProductId = null;
+let selectedProductName = null;
+let inventoryItems = [];
+
+function goHomeProfiles(){
+  const p = window.location.pathname.replace(/\\/g, '/');
+  if(p.includes('/panel-tienda/')){
+    window.location.href = '../app-cliente/perfiles.html';
+  } else {
+    window.location.href = 'perfiles.html';
+  }
+}
+
+function toggleMode(){
+  const isLogin = document.getElementById('login-form').style.display !== 'none';
+  document.getElementById('login-form').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('register-form').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('form-title').textContent = isLogin ? 'Crea tu tienda' : 'Inicia sesión';
+  document.getElementById('toggle-text').innerHTML = isLogin
+    ? '¿Ya tienes tienda? <a onclick="toggleMode()">Inicia sesión</a>'
+    : '¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a>';
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+function showError(msg){
+  const e = document.getElementById('error-msg');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+async function register(){
+  const body = {
+    name: document.getElementById('reg-name').value,
+    email: document.getElementById('reg-email').value,
+    password: document.getElementById('reg-password').value,
+    address: document.getElementById('reg-address').value,
+    neighborhood: document.getElementById('reg-neighborhood').value,
+    municipality: document.getElementById('reg-municipality').value,
+    department: document.getElementById('reg-department').value,
+    phone: document.getElementById('reg-phone').value,
+  };
+  try{
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'Error al registrar'); }
+    await doLogin(body.email, body.password);
+  }catch(e){ showError(e.message); }
+}
+
+async function login(){
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  await doLogin(email, password);
+}
+
+async function doLogin(email, password){
+  try{
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+    });
+    if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'Credenciales inválidas'); }
+    const data = await res.json();
+    TOKEN = data.access_token;
+    STORE = data.store;
+    localStorage_shim_set();
+    enterApp();
+  }catch(e){ showError(e.message); }
+}
+
+function localStorage_shim_set(){
+  try{
+    if(TOKEN && STORE){
+      localStorage.setItem('store_token', TOKEN);
+      localStorage.setItem('store_data', JSON.stringify(STORE));
+    }
+  }catch(_e){}
+}
+
+let suppliersList = [];
+let currentProfitPeriod = 'month';
+
+function getLocalMetaKey(){ return `inventario_meta_${STORE ? STORE.id : 'default'}`; }
+function getLocalSuppliersKey(){ return `inventario_suppliers_${STORE ? STORE.id : 'default'}`; }
+function getLocalInventoryMeta(){
+  try{ return JSON.parse(localStorage.getItem(getLocalMetaKey()) || '{}'); }catch(_e){ return {}; }
+}
+function saveLocalInventoryMeta(productId, cost_price, supplier){
+  try{
+    const meta = getLocalInventoryMeta();
+    meta[productId] = {cost_price: Number(cost_price) || 0, supplier: supplier || null};
+    localStorage.setItem(getLocalMetaKey(), JSON.stringify(meta));
+  }catch(_e){}
+}
+
+function enterApp(initialView){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('sidebar-store-name').textContent = STORE.name;
+  loadSuppliers();
+  loadInventory();
+  loadStoreSummary();
+  ensureStoreCoordinates();
+  const savedView = initialView || localStorage.getItem('store_active_view') || 'inventory';
+  switchView(savedView);
+}
+
+function ensureStoreCoordinates(){
+  if(!STORE || (STORE.latitude != null && STORE.longitude != null) || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const latitude = Number(pos.coords.latitude.toFixed(6));
+    const longitude = Number(pos.coords.longitude.toFixed(6));
+    try{
+      const res = await authFetch('/stores/me', {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name: STORE.name,
+          address: STORE.address || null,
+          neighborhood: STORE.neighborhood || null,
+          municipality: STORE.municipality || null,
+          department: STORE.department || null,
+          phone: STORE.phone || null,
+          latitude,
+          longitude,
+          offers_delivery: STORE.offers_delivery !== false
+        })
+      });
+      if(res.ok){
+        STORE = await res.json();
+        localStorage_shim_set();
+      }
+    }catch(_e){}
+  }, () => {}, {enableHighAccuracy:true, timeout:10000});
+}
+
+function useCurrentStoreLocation(){
+  const msg = document.getElementById('profile-message');
+  if(!navigator.geolocation){
+    msg.textContent = 'Tu navegador no soporta geolocalización.';
+    return;
+  }
+  msg.textContent = 'Obteniendo ubicación GPS...';
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('profile-latitude').value = Number(pos.coords.latitude.toFixed(6));
+    document.getElementById('profile-longitude').value = Number(pos.coords.longitude.toFixed(6));
+    msg.textContent = 'Ubicación detectada. Haz clic en "Guardar cambios" para confirmar.';
+  }, () => {
+    msg.textContent = 'No se pudo obtener el GPS. Revisa los permisos de ubicación del navegador.';
+  }, {enableHighAccuracy:true, timeout:10000});
+}
+
+async function loadStoreSummary(){
+  if(inventoryItems.length === 0){
+    try{
+      const invRes = await authFetch('/stores/me/inventory');
+      if(invRes.ok) inventoryItems = enrichInventoryWithMeta(await invRes.json());
+    }catch(_e){}
+  }
+  const summary = await computeStoreSummary('all');
+  document.getElementById('summary-sales-count').textContent = summary.sales_count;
+  document.getElementById('summary-sales-total').textContent = `$${Number(summary.sales_total).toLocaleString('es-CO')}`;
+  const profitEl = document.getElementById('summary-profit-total');
+  if(profitEl) profitEl.textContent = `$${Number(summary.profit_total).toLocaleString('es-CO')}`;
+}
+
+async function computeStoreSummary(period = 'all'){
+  try{
+    const response = await authFetch(`/stores/me/summary?period=${encodeURIComponent(period)}`);
+    if(response.ok){
+      const data = await response.json();
+      if(typeof data.profit_total === 'number' && Array.isArray(data.history)){
+        return data;
+      }
+    }
+  }catch(_e){}
+
+  // Cálculo de respaldo directo desde /orders/me + costos del inventario
+  let orders = [];
+  try{
+    const res = await authFetch('/orders/me');
+    if(res.ok) orders = await res.json();
+  }catch(_e){}
+
+  const now = new Date();
+  let cutoff = null;
+  if(period === 'day') cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  else if(period === 'week') cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  else if(period === 'month') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const meta = getLocalInventoryMeta();
+  const invMap = {};
+  inventoryItems.forEach(item => {
+    invMap[item.product_id] = {
+      name: item.product ? item.product.name : `Prod #${item.product_id}`,
+      cost_price: Number(item.cost_price || (meta[item.product_id] && meta[item.product_id].cost_price) || 0),
+      unit: item.unit || 'unidad'
+    };
+  });
+
+  const delivered = orders.filter(o => {
+    if(o.status !== 'entregado') return false;
+    if(!cutoff) return true;
+    const dt = o.created_at ? new Date(o.created_at) : new Date(0);
+    return dt >= cutoff;
+  });
+
+  let sales_total = 0;
+  let cost_total = 0;
+  const history = delivered.map(o => {
+    const rev = Math.round(Number(o.total) || 0);
+    let cost = 0;
+    const labels = [];
+    (o.items || []).forEach(it => {
+      const info = invMap[it.product_id] || {};
+      const qty = Number(it.quantity) || 0;
+      const unitCost = Number(it.cost_price || info.cost_price || 0);
+      cost += unitCost * qty;
+      const unit = it.unit || info.unit || 'un.';
+      labels.push(`${formatQuantity(qty)} ${unit} ${info.name || ('Prod #' + it.product_id)}`);
+    });
+    cost = Math.round(cost);
+    const profit = rev - cost;
+    sales_total += rev;
+    cost_total += cost;
+    return {
+      id: o.id,
+      customer_name: o.customer_name || 'Venta',
+      created_at: o.created_at,
+      items_summary: labels.join(', ') || 'Venta',
+      total: rev,
+      cost,
+      profit
+    };
+  });
+
+  return {
+    sales_count: delivered.length,
+    sales_total,
+    cost_total,
+    profit_total: sales_total - cost_total,
+    history
+  };
+}
+
+function logout(){
+  TOKEN = null; STORE = null;
+  try{
+    localStorage.removeItem('store_token');
+    localStorage.removeItem('store_data');
+    localStorage.removeItem('store_active_view');
+  }catch(_e){}
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function switchView(view){
+  try{ localStorage.setItem('store_active_view', view); }catch(_e){}
+  document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
+  document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
+  document.getElementById('view-sales').style.display = view === 'sales' ? 'block' : 'none';
+  document.getElementById('view-profits').style.display = view === 'profits' ? 'block' : 'none';
+  document.getElementById('view-suppliers').style.display = view === 'suppliers' ? 'block' : 'none';
+  document.getElementById('view-profile').style.display = view === 'profile' ? 'block' : 'none';
+  if(view === 'inventory') loadInventory();
+  if(view === 'orders') loadOrders();
+  if(view === 'sales') loadSalesForm();
+  if(view === 'profits') loadProfits(currentProfitPeriod);
+  if(view === 'suppliers') loadSuppliers();
+  if(view === 'profile') loadProfile();
+}
+
+async function authFetch(path, options={}){
+  options.headers = Object.assign({}, options.headers, {'Authorization': `Bearer ${TOKEN}`});
+  const res = await fetch(`${API_URL}${path}`, options);
+  if(res.status === 401){
+    logout();
+  }
+  return res;
+}
+
+function stockClass(stock){
+  if(stock <= 0) return 'stock-out';
+  if(stock <= 5) return 'stock-low';
+  return 'stock-ok';
+}
+
+function enrichInventoryWithMeta(items){
+  const meta = getLocalInventoryMeta();
+  return items.map(item => {
+    const local = meta[item.product_id] || {};
+    return {
+      ...item,
+      cost_price: Number(item.cost_price || local.cost_price || 0),
+      supplier: item.supplier || local.supplier || ''
+    };
+  });
+}
+
+async function loadInventory(){
+  const res = await authFetch('/stores/me/inventory');
+  const items = await res.json();
+  inventoryItems = enrichInventoryWithMeta(items);
+  updateInventorySummary();
+  renderInventory(document.getElementById('inventory-search').value);
+}
+
+function updateInventorySummary(){
+  document.getElementById('summary-products').textContent = inventoryItems.length;
+  document.getElementById('summary-units').textContent = inventoryItems.reduce((sum, item) => sum + item.stock, 0).toLocaleString('es-CO');
+  document.getElementById('summary-low-stock').textContent = inventoryItems.filter(item => item.stock <= 5).length;
+}
+
+function renderInventory(search = ''){
+  const normalizedSearch = search.trim().toLowerCase();
+  const items = inventoryItems.filter(item =>
+    !normalizedSearch
+    || item.product.name.toLowerCase().includes(normalizedSearch)
+    || (item.supplier && item.supplier.toLowerCase().includes(normalizedSearch))
+  );
+  const tbody = document.getElementById('inventory-tbody');
+  if(items.length === 0){
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto para empezar a vender.'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(item => {
+    const unitSuffix = item.unit && item.unit !== 'unidad' ? ` / ${item.unit}` : '';
+    const cost = Number(item.cost_price || 0);
+    const unitProfit = Number(item.price || 0) - cost;
+    return `
+    <tr>
+      <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
+      <td>${item.product.category || '—'}</td>
+      <td>${item.supplier || '<span style="color:var(--muted);">Sin proveedor</span>'}</td>
+      <td class="mono" style="color:var(--muted);">$${cost.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono">$${item.price.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono" style="color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">$${unitProfit.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${formatQuantity(item.stock)} ${item.unit || 'unidad'}</span></td>
+      <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
+    </tr>
+  `}).join('');
+}
+
+async function loadProfits(period = 'month'){
+  currentProfitPeriod = period;
+  ['day','week','month','all'].forEach(p => {
+    const btn = document.getElementById(`period-${p}`);
+    if(btn) btn.classList.toggle('secondary', p !== period);
+  });
+  if(inventoryItems.length === 0) await loadInventory();
+  const data = await computeStoreSummary(period);
+  document.getElementById('profit-sales-count').textContent = data.sales_count;
+  document.getElementById('profit-revenue').textContent = `$${Number(data.sales_total).toLocaleString('es-CO')}`;
+  document.getElementById('profit-cost').textContent = `$${Number(data.cost_total).toLocaleString('es-CO')}`;
+  document.getElementById('profit-net').textContent = `$${Number(data.profit_total).toLocaleString('es-CO')}`;
+
+  const tbody = document.getElementById('profits-tbody');
+  if(!data.history || data.history.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="eyebrow">Sin ventas en este periodo</span><p>Cuando registres ventas en mostrador o marques pedidos como entregados, verás aquí el desglose de ganancias.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.history.map(row => `
+    <tr>
+      <td class="mono">#${row.id}</td>
+      <td>${row.customer_name}</td>
+      <td style="font-size:13px;">${row.items_summary || 'Venta'}</td>
+      <td class="mono">$${Number(row.total).toLocaleString('es-CO')}</td>
+      <td class="mono" style="color:var(--muted);">$${Number(row.cost).toLocaleString('es-CO')}</td>
+      <td class="mono" style="color:${row.profit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">$${Number(row.profit).toLocaleString('es-CO')}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadSuppliers(){
+  let list = [];
+  try{
+    const res = await authFetch('/stores/me/suppliers');
+    if(res.ok){
+      list = await res.json();
+      localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(list));
+    } else {
+      list = JSON.parse(localStorage.getItem(getLocalSuppliersKey()) || '[]');
+    }
+  }catch(_e){
+    try{ list = JSON.parse(localStorage.getItem(getLocalSuppliersKey()) || '[]'); }catch(_err){ list = []; }
+  }
+  suppliersList = list;
+  renderSuppliersDatalist();
+  renderSuppliersTable();
+}
+
+function renderSuppliersDatalist(){
+  const dl = document.getElementById('suppliers-datalist');
+  if(!dl) return;
+  dl.innerHTML = suppliersList.map(s => `<option value="${s.name.replace(/"/g, '&quot;')}">${s.contact_name || ''}</option>`).join('');
+}
+
+function renderSuppliersTable(){
+  const tbody = document.getElementById('suppliers-tbody');
+  if(!tbody) return;
+  if(suppliersList.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="eyebrow">Sin proveedores registrados</span><p>Usa el formulario de arriba para registrar tus proveedores.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = suppliersList.map(s => `
+    <tr>
+      <td><strong>${s.name}</strong>${s.email ? `<br><span style="color:var(--muted);font-size:12px;">${s.email}</span>` : ''}</td>
+      <td>${s.contact_name || '—'}</td>
+      <td class="mono">${s.phone || '—'}</td>
+      <td>${s.notes || '—'}</td>
+      <td><button class="btn small secondary" onclick="deleteSupplier(${s.id})">Eliminar</button></td>
+    </tr>
+  `).join('');
+}
+
+async function saveSupplier(){
+  const name = document.getElementById('sup-name').value.trim();
+  const contact_name = document.getElementById('sup-contact').value.trim();
+  const phone = document.getElementById('sup-phone').value.trim();
+  const email = document.getElementById('sup-email').value.trim();
+  const notes = document.getElementById('sup-notes').value.trim();
+  const msg = document.getElementById('supplier-message');
+  if(!name){
+    alert('Escribe el nombre del proveedor o empresa');
+    return;
+  }
+  try{
+    const res = await authFetch('/stores/me/suppliers', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, contact_name: contact_name || null, phone: phone || null, email: email || null, notes: notes || null})
+    });
+    if(res.ok){
+      const created = await res.json();
+      suppliersList.push(created);
+    } else {
+      suppliersList.push({id: Date.now(), store_id: STORE ? STORE.id : 0, name, contact_name, phone, email, notes});
+    }
+  }catch(_e){
+    suppliersList.push({id: Date.now(), store_id: STORE ? STORE.id : 0, name, contact_name, phone, email, notes});
+  }
+  localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(suppliersList));
+  document.getElementById('sup-name').value = '';
+  document.getElementById('sup-contact').value = '';
+  document.getElementById('sup-phone').value = '';
+  document.getElementById('sup-email').value = '';
+  document.getElementById('sup-notes').value = '';
+  msg.textContent = 'Proveedor guardado correctamente.';
+  renderSuppliersDatalist();
+  renderSuppliersTable();
+}
+
+async function deleteSupplier(id){
+  if(!confirm('¿Eliminar este proveedor?')) return;
+  try{
+    await authFetch(`/stores/me/suppliers/${id}`, {method:'DELETE'});
+  }catch(_e){}
+  suppliersList = suppliersList.filter(s => s.id !== id);
+  localStorage.setItem(getLocalSuppliersKey(), JSON.stringify(suppliersList));
+  renderSuppliersDatalist();
+  renderSuppliersTable();
+}
+
+async function loadSalesForm(){
+  if(inventoryItems.length === 0) await loadInventory();
+  if(inventoryItems.length === 0){
+    document.getElementById('sale-product-search').placeholder = 'No hay productos en tu inventario';
+    document.getElementById('sale-product-search').disabled = true;
+    document.getElementById('sale-quantity').disabled = true;
+    return;
+  }
+  document.getElementById('sale-product-search').disabled = false;
+  document.getElementById('sale-quantity').disabled = false;
+}
+
+function loadProfile(){
+  document.getElementById('profile-name').value = STORE.name || '';
+  document.getElementById('profile-address').value = STORE.address || '';
+  document.getElementById('profile-neighborhood').value = STORE.neighborhood || '';
+  document.getElementById('profile-municipality').value = STORE.municipality || '';
+  document.getElementById('profile-department').value = STORE.department || '';
+  document.getElementById('profile-phone').value = STORE.phone || '';
+  document.getElementById('profile-latitude').value = STORE.latitude ?? '';
+  document.getElementById('profile-longitude').value = STORE.longitude ?? '';
+  document.getElementById('profile-delivery').checked = STORE.offers_delivery !== false;
+  document.getElementById('profile-message').textContent = '';
+}
+
+async function saveProfile(){
+  const name = document.getElementById('profile-name').value.trim();
+  const phone = document.getElementById('profile-phone').value.trim();
+  if(name.length < 2){ document.getElementById('profile-message').textContent = 'Escribe un nombre válido para la tienda.'; return; }
+  const res = await authFetch('/stores/me', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      name,
+      address: document.getElementById('profile-address').value.trim() || null,
+      neighborhood: document.getElementById('profile-neighborhood').value.trim() || null,
+      municipality: document.getElementById('profile-municipality').value.trim() || null,
+      department: document.getElementById('profile-department').value.trim() || null,
+      phone: phone || null,
+      latitude: parseOptionalNumber('profile-latitude'),
+      longitude: parseOptionalNumber('profile-longitude'),
+      offers_delivery: document.getElementById('profile-delivery').checked
+    })
+  });
+  if(!res.ok){ document.getElementById('profile-message').textContent = 'No se pudieron guardar los cambios.'; return; }
+  STORE = await res.json();
+  localStorage_shim_set();
+  document.getElementById('sidebar-store-name').textContent = STORE.name;
+  document.getElementById('profile-message').textContent = 'Cambios guardados correctamente.';
+}
+
+function parseOptionalNumber(id){
+  const value = document.getElementById(id).value.trim();
+  return value === '' ? null : Number(value);
+}
+
+let saleSearchTimeout;
+let selectedSaleItem = null;
+
+function searchSaleProducts(query){
+  clearTimeout(saleSearchTimeout);
+  const box = document.getElementById('sale-suggestions');
+  const normalizedQuery = query.trim().toLowerCase();
+  if(!normalizedQuery){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  saleSearchTimeout = setTimeout(() => {
+    const matches = inventoryItems.filter(item => item.product.name.toLowerCase().includes(normalizedQuery));
+    box.innerHTML = matches.length ? matches.map(item => `
+      <div class="sale-suggestion" onclick="selectSaleProduct(${item.product_id})">
+        <span>${item.product.name}</span><small>${formatQuantity(item.stock)} ${item.unit || 'unidad'} disponibles</small>
+      </div>`).join('') : '<div class="sale-suggestion"><small>No hay coincidencias en tu inventario</small></div>';
+    box.style.display = 'block';
+  }, 120);
+}
+
+function formatQuantity(value){
+  return Number(value).toLocaleString('es-CO', {maximumFractionDigits: 3});
+}
+
+function selectSaleProduct(productId){
+  selectedSaleItem = inventoryItems.find(item => item.product_id === productId);
+  const unit = selectedSaleItem.unit || 'unidad';
+  const isWeight = unit !== 'unidad';
+  document.getElementById('sale-product-search').value = selectedSaleItem.product.name;
+  document.getElementById('sale-suggestions').style.display = 'none';
+  document.getElementById('sale-selected').style.display = 'flex';
+  document.getElementById('sale-selected').innerHTML = `<span>Disponible: ${formatQuantity(selectedSaleItem.stock)} ${unit}</span><span class="sale-unit">$${selectedSaleItem.price.toLocaleString('es-CO')} / ${unit}</span>`;
+  document.getElementById('sale-unit-display').value = unit;
+  document.getElementById('sale-quantity-label').textContent = `Cantidad vendida (${unit})`;
+  const input = document.getElementById('sale-quantity');
+  input.max = selectedSaleItem.stock;
+  input.min = isWeight ? '0.01' : '1';
+  input.step = isWeight ? 'any' : '1';
+  input.value = isWeight ? '0.5' : '1';
+  const amountField = document.getElementById('sale-amount-field');
+  const amountInput = document.getElementById('sale-amount');
+  if(isWeight){
+    amountField.style.display = 'block';
+    const defaultQty = parseFloat(input.value) || 0;
+    amountInput.value = selectedSaleItem.price ? Math.round(defaultQty * selectedSaleItem.price) : '';
+    updateSalePreview();
+  } else {
+    amountField.style.display = 'none';
+    amountInput.value = '';
+    document.getElementById('sale-calc-preview').textContent = '';
+  }
+}
+
+function onSaleQuantityChange(val){
+  if(!selectedSaleItem) return;
+  const unit = selectedSaleItem.unit || 'unidad';
+  if(unit === 'unidad') return;
+  const qty = parseFloat(val);
+  const amountInput = document.getElementById('sale-amount');
+  if(Number.isFinite(qty) && qty > 0 && selectedSaleItem.price > 0){
+    amountInput.value = Math.round(qty * selectedSaleItem.price);
+  } else {
+    amountInput.value = '';
+  }
+  updateSalePreview();
+}
+
+function onSaleAmountChange(val){
+  if(!selectedSaleItem || !selectedSaleItem.price) return;
+  const unit = selectedSaleItem.unit || 'unidad';
+  if(unit === 'unidad') return;
+  const amount = parseFloat(val);
+  const qtyInput = document.getElementById('sale-quantity');
+  if(Number.isFinite(amount) && amount > 0){
+    const calculatedQty = amount / selectedSaleItem.price;
+    qtyInput.value = Number(calculatedQty.toFixed(4));
+  } else {
+    qtyInput.value = '';
+  }
+  updateSalePreview();
+}
+
+function updateSalePreview(){
+  const preview = document.getElementById('sale-calc-preview');
+  if(!preview) return;
+  if(!selectedSaleItem || (selectedSaleItem.unit || 'unidad') === 'unidad'){ preview.textContent = ''; return; }
+  const unit = selectedSaleItem.unit || 'unidad';
+  const qty = parseFloat(document.getElementById('sale-quantity').value) || 0;
+  const total = Math.round(qty * selectedSaleItem.price);
+  const remaining = Math.max(0, selectedSaleItem.stock - qty);
+  if(qty <= 0){
+    preview.textContent = '';
+    return;
+  }
+  preview.innerHTML = `Se descontarán <strong>${formatQuantity(qty)} ${unit}</strong> del stock (quedarán <strong>${formatQuantity(remaining)} ${unit}</strong>) · Total: <strong>$${total.toLocaleString('es-CO')}</strong>`;
+}
+
+async function registerSale(){
+  if(!selectedSaleItem){ alert('Selecciona un producto primero'); return; }
+  const unit = selectedSaleItem.unit || 'unidad';
+  const isWeight = unit !== 'unidad';
+  const rawVal = document.getElementById('sale-quantity').value;
+  const quantity = isWeight ? parseFloat(rawVal) : parseInt(rawVal, 10);
+  if(!Number.isFinite(quantity) || quantity <= 0 || quantity > selectedSaleItem.stock + 0.0001){
+    alert('Indica una cantidad válida dentro del stock disponible'); return;
+  }
+  const safeQuantity = isWeight ? Math.min(quantity, selectedSaleItem.stock) : Math.round(Math.min(quantity, selectedSaleItem.stock));
+  const res = await authFetch('/stores/me/sales', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity: Number(safeQuantity.toFixed(4)), unit})
+  });
+  if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
+  const sale = await res.json();
+  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada (${formatQuantity(safeQuantity)} ${unit} · $${Math.round(sale.total).toLocaleString('es-CO')}). Stock actualizado.`;
+  const qtyInput = document.getElementById('sale-quantity');
+  qtyInput.min = '1';
+  qtyInput.step = '1';
+  qtyInput.value = '1';
+  document.getElementById('sale-amount').value = '';
+  document.getElementById('sale-amount-field').style.display = 'none';
+  document.getElementById('sale-calc-preview').textContent = '';
+  document.getElementById('sale-product-search').value = '';
+  document.getElementById('sale-selected').style.display = 'none';
+  selectedSaleItem = null;
+  inventoryItems = [];
+  await loadSalesForm();
+  await loadStoreSummary();
+}
+
+async function deleteInventoryItem(productId){
+  if(!confirm('¿Quitar este producto de tu inventario?')) return;
+  const response = await authFetch(`/products/${productId}`, {method:'DELETE'});
+  if(!response.ok){
+    let message = 'No se pudo eliminar el producto.';
+    try { message = (await response.json()).detail || message; } catch {}
+    alert(message);
+    return;
+  }
+  const result = await response.json();
+  await loadInventory();
+  if(result.catalog_deleted){
+    alert('Producto eliminado del inventario y del catálogo.');
+  } else {
+    alert('Producto quitado de tu inventario. Se conserva en el catálogo porque otra tienda lo usa.');
+  }
+}
+
+function openInventoryModal(){
+  document.getElementById('inventory-modal').style.display = 'flex';
+  document.querySelector('#inventory-modal h3').textContent = 'Agregar producto al inventario';
+  document.getElementById('modal-product-search').value = '';
+  document.getElementById('modal-category').value = '';
+  document.getElementById('modal-supplier').value = '';
+  document.getElementById('modal-cost-price').value = '';
+  document.getElementById('modal-price').value = '';
+  document.getElementById('modal-stock').value = '';
+  document.getElementById('modal-unit').value = 'unidad';
+  document.getElementById('modal-image-file').value = '';
+  document.getElementById('modal-image-url').value = '';
+  document.getElementById('image-preview').style.display = 'none';
+  document.getElementById('product-suggestions').innerHTML = '';
+  selectedProductId = null; selectedProductName = null;
+  renderSuppliersDatalist();
+}
+
+function openEditInventoryModal(item){
+  openInventoryModal();
+  document.querySelector('#inventory-modal h3').textContent = 'Editar producto';
+  selectedProductId = item.product_id;
+  selectedProductName = item.product.name;
+  document.getElementById('modal-product-search').value = item.product.name;
+  document.getElementById('modal-category').value = item.product.category || '';
+  document.getElementById('modal-supplier').value = item.supplier || '';
+  document.getElementById('modal-cost-price').value = item.cost_price || 0;
+  document.getElementById('modal-price').value = item.price;
+  document.getElementById('modal-stock').value = item.stock;
+  document.getElementById('modal-unit').value = item.unit || 'unidad';
+  document.getElementById('modal-image-url').value = item.product.image_url && !item.product.image_url.startsWith('data:') ? item.product.image_url : '';
+  document.getElementById('product-suggestions').innerHTML = '<div style="color:var(--green);">Producto seleccionado</div>';
+  if(item.product.image_url){
+    document.getElementById('image-preview').src = item.product.image_url;
+    document.getElementById('image-preview').style.display = 'block';
+  }
+}
+function closeInventoryModal(){ document.getElementById('inventory-modal').style.display = 'none'; }
+
+let searchTimeout;
+function searchProducts(q){
+  selectedProductId = null;
+  clearTimeout(searchTimeout);
+  if(q.length < 2){ document.getElementById('product-suggestions').innerHTML=''; return; }
+  searchTimeout = setTimeout(async () => {
+    const res = await fetch(`${API_URL}/products?q=${encodeURIComponent(q)}`);
+    const products = await res.json();
+    const box = document.getElementById('product-suggestions');
+    if(products.length === 0){ box.innerHTML = `<div style="color:var(--muted);">No existe, se creará uno nuevo llamado "${q}"</div>`; return; }
+    box.innerHTML = products.map(p => `<div style="padding:6px;cursor:pointer;border-bottom:1px solid var(--line);" onclick="pickProduct(${p.id}, '${p.name.replace(/'/g,"")}')">${p.name} <span style="color:var(--muted);">(${p.category||'sin categoría'})</span></div>`).join('');
+  }, 300);
+}
+function pickProduct(id, name){
+  selectedProductId = id; selectedProductName = name;
+  document.getElementById('modal-product-search').value = name;
+  document.getElementById('product-suggestions').innerHTML = `<div style="color:var(--green);">✓ Producto existente seleccionado</div>`;
+}
+
+function previewProductImage(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('image-preview').src = reader.result;
+    document.getElementById('image-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function readProductImage(){
+  const file = document.getElementById('modal-image-file').files[0];
+  if(!file) return Promise.resolve(document.getElementById('modal-image-url').value.trim() || null);
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveInventoryItem(){
+  const price = parseFloat(document.getElementById('modal-price').value);
+  const cost_price = parseFloat(document.getElementById('modal-cost-price').value) || 0;
+  const supplier = document.getElementById('modal-supplier').value.trim() || null;
+  const stock = parseFloat(document.getElementById('modal-stock').value);
+  const unit = document.getElementById('modal-unit').value;
+  const name = document.getElementById('modal-product-search').value.trim();
+  if(!name || isNaN(price) || price < 0 || cost_price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precios y stock con valores válidos'); return; }
+  const imageUrl = await readProductImage();
+
+  let productId = selectedProductId;
+  if(!productId){
+    const category = document.getElementById('modal-category').value;
+    const res = await fetch(`${API_URL}/products`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, category, image_url: imageUrl})
+    });
+    const prod = await res.json();
+    productId = prod.id;
+  } else if(imageUrl !== null){
+    await authFetch(`/products/${productId}/image`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({image_url: imageUrl})
+    });
+  }
+
+  saveLocalInventoryMeta(productId, cost_price, supplier);
+
+  await authFetch('/stores/me/inventory', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({product_id: productId, price, cost_price, supplier, stock, unit})
+  });
+  closeInventoryModal();
+  await loadInventory();
+  loadStoreSummary();
+}
+
+async function loadOrders(){
+  const res = await authFetch('/orders/me');
+  const orders = await res.json();
+  const tbody = document.getElementById('orders-tbody');
+  if(orders.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="eyebrow">Sin pedidos</span><p>Aquí aparecerán los pedidos de tus clientes.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td class="mono">#${o.id}</td>
+      <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
+      <td>${o.delivery_address ? 'Domicilio: ' + o.delivery_address : 'Recoge en tienda'}</td>
+      <td class="mono">$${o.total.toLocaleString('es-CO')}</td>
+      <td><span class="status-pill status-${o.status}">${o.status.replace('_',' ')}</span></td>
+      <td>
+        ${o.status === 'entregado'
+          ? '<span style="color:var(--muted);font-size:12px;font-weight:500;">Pedido finalizado</span>'
+          : `<select onchange="updateOrderStatus(${o.id}, this.value)" style="padding:5px;border-radius:3px;border:1px solid var(--line);font-size:12px;">
+              <option value="">Cambiar estado...</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="en_camino">En camino</option>
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>`
+        }
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function updateOrderStatus(orderId, status){
+  if(!status) return;
+  const res = await authFetch(`/orders/${orderId}/status`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status})
+  });
+  if(!res.ok){
+    const err = await res.json().catch(() => ({}));
+    alert(err.detail || 'No se pudo cambiar el estado del pedido.');
+  }
+  loadOrders();
+  loadStoreSummary();
+}
+
+(function restoreStoreSession(){
+  try{
+    const savedToken = localStorage.getItem('store_token');
+    const savedStore = localStorage.getItem('store_data');
+    if(savedToken && savedStore){
+      TOKEN = savedToken;
+      STORE = JSON.parse(savedStore);
+      enterApp();
+    }
+  }catch(_e){}
+})();
+</script>
+</body>
+</html>

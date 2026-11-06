@@ -84,6 +84,7 @@
   .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;max-height:calc(100vh - 32px);overflow-y:auto;}
   .modal h3{margin-bottom:18px;font-size:17px;}
   .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px;}
+  .summary-grid.four-cols{grid-template-columns:repeat(4,minmax(0,1fr));}
   .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:16px 18px;}
   .summary-card .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
   .summary-card .value{font:700 24px 'IBM Plex Mono',monospace;color:var(--ink);margin-top:8px;}
@@ -107,9 +108,42 @@
   .profile-grid .field:first-child{grid-column:1/-1;}
   .checkbox-field{display:flex;align-items:center;gap:8px;margin:4px 0 20px;font-size:13px;color:var(--ink);}
   .checkbox-field input{width:16px;height:16px;accent-color:var(--green);}
-  @media(max-width:520px){.profile-grid{grid-template-columns:1fr}.profile-grid .field:first-child{grid-column:auto}}
-  @media(max-width:700px){.sidebar{width:76px}.sidebar .brand{padding-left:12px;padding-right:12px}.sidebar .brand .eyebrow,.sidebar .brand .store-name,.nav-item{font-size:0}.nav-item{width:76px;padding:16px 0;text-align:center}.nav-item::first-letter{font-size:18px}.nav-item.logout{width:76px}.sidebar .brand::after{content:'V';font:700 24px 'Sora',sans-serif;color:var(--amber)}main{margin-left:76px;padding:24px 18px}.summary-grid{grid-template-columns:1fr}.inventory-toolbar{align-items:stretch;flex-direction:column}.inventory-toolbar input{width:100%}table{display:block;overflow-x:auto;white-space:nowrap}}
-  @media(max-width:520px){.modal-overlay{padding:12px;align-items:flex-start;overflow-y:auto}.modal{width:100%;padding:24px 20px;max-height:none;margin:auto 0;}}
+  @media(max-width:768px){
+    .sidebar{
+      position:sticky;top:0;left:0;right:0;bottom:auto;width:100%;z-index:30;
+      flex-direction:row;align-items:center;overflow-x:auto;padding:10px 12px;gap:6px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);scrollbar-width:none;
+    }
+    .sidebar::-webkit-scrollbar{display:none;}
+    .sidebar .brand{
+      padding:0 12px 0 4px;border-bottom:none;border-right:1px solid rgba(255,255,255,.15);
+      margin-right:4px;flex:0 0 auto;
+    }
+    .sidebar .brand .eyebrow{display:none;}
+    .sidebar .brand .store-name{font-size:14px;white-space:nowrap;}
+    .nav-item{
+      flex:0 0 auto;padding:8px 13px;font-size:13px;border-left:none;
+      border-radius:999px;white-space:nowrap;
+    }
+    .nav-item.active{background:var(--amber);color:var(--navy);border-left:none;}
+    .nav-item.logout{
+      margin-top:0;border-top:none;padding:8px 13px;
+      border:1px solid rgba(255,255,255,.2);
+    }
+    main{margin-left:0;padding:20px 14px;}
+    .page-header{flex-direction:column;align-items:flex-start;gap:12px;}
+    .summary-grid,.summary-grid.four-cols{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .inventory-toolbar{align-items:stretch;flex-direction:column;}
+    .inventory-toolbar input{width:100%;}
+    table{display:block;overflow-x:auto;white-space:nowrap;}
+  }
+  @media(max-width:520px){
+    .profile-grid{grid-template-columns:1fr;}
+    .profile-grid .field:first-child{grid-column:auto;}
+    .summary-grid,.summary-grid.four-cols{grid-template-columns:1fr;}
+    .modal-overlay{padding:12px;align-items:flex-start;overflow-y:auto;}
+    .modal{width:100%;padding:24px 20px;max-height:none;margin:auto 0;}
+  }
   .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
   .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
 </style>
@@ -141,7 +175,7 @@
       <button class="primary" onclick="register()">Crear tienda</button>
     </div>
 
-    <button class="secondary-login" type="button" onclick="window.location.href='../app-cliente/perfiles.html'">← Volver al inicio</button>
+    <button class="secondary-login" type="button" onclick="goHomeProfiles()">← Volver al inicio</button>
 
     <p class="error-msg" id="error-msg"></p>
     <p class="toggle-mode" id="toggle-text">¿No tienes tienda? <a onclick="toggleMode()">Regístrala aquí</a></p>
@@ -251,7 +285,7 @@
           <button class="btn small secondary" id="period-all" onclick="loadProfits('all')">Todo</button>
         </div>
       </div>
-      <div class="summary-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+      <div class="summary-grid four-cols">
         <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="profit-sales-count">0</div></div>
         <div class="summary-card"><div class="label">Ingresos (Ventas)</div><div class="value" id="profit-revenue">$0</div></div>
         <div class="summary-card warning"><div class="label">Costo (Compra)</div><div class="value" id="profit-cost">$0</div></div>
@@ -351,6 +385,15 @@ let STORE = null;
 let selectedProductId = null;
 let selectedProductName = null;
 let inventoryItems = [];
+
+function goHomeProfiles(){
+  const p = window.location.pathname.replace(/\\/g, '/');
+  if(p.includes('/panel-tienda/')){
+    window.location.href = '../app-cliente/perfiles.html';
+  } else {
+    window.location.href = 'perfiles.html';
+  }
+}
 
 function toggleMode(){
   const isLogin = document.getElementById('login-form').style.display !== 'none';
