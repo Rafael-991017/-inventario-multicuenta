@@ -231,14 +231,79 @@ async function loadDeliveries(){
   try{
     const response = await fetch(`${API_URL}/couriers/me/orders`, {headers:{Authorization:`Bearer ${token}`} });
     if(!response.ok) throw new Error('No se pudieron cargar las entregas');
-    const orders = await response.json();
+    const rawOrders = await response.json();
+    const acceptedMap = getAcceptedOrdersMap();
+
+    // Filtrar pedidos: ocultar entregados/cancelados y ocultar los que ya aceptó OTRO domiciliario
+    const orders = rawOrders.filter(order => {
+      if(order.status === 'entregado' || order.status === 'cancelado') return false;
+      const localAcc = acceptedMap[order.id];
+      if(localAcc && localAcc.courier_id && courier && localAcc.courier_id !== courier.id){
+        return false;
+      }
+      return true;
+    });
+
     if(!orders.length){ list.innerHTML = '<p class="muted">No hay entregas disponibles por ahora.</p>'; return; }
-    list.innerHTML = orders.map(order => `<article class="delivery-card"><h3>Pedido #${order.id} · ${order.store_name}</h3><p><strong>Cliente:</strong> ${order.customer_name}<br><strong>Dirección:</strong> ${order.delivery_address}<br><strong>Total:</strong> $${Number(order.total).toLocaleString('es-CO')}</p><div class="delivery-actions">${order.courier_id ? `<button onclick="updateDeliveryStatus(${order.id}, 'entregado')">Marcar entregado</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(order.delivery_address)}')">Ver ruta</button>` : `<button onclick="acceptDelivery(${order.id})">Aceptar entrega</button>`}</div></article>`).join('');
+    list.innerHTML = orders.map(order => {
+      const localAcc = acceptedMap[order.id];
+      const isAcceptedByMe = Boolean(
+        order.courier_accepted === true ||
+        order.status === 'en_camino' ||
+        (localAcc && courier && localAcc.courier_id === courier.id)
+      );
+      return `<article class="delivery-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <h3>Pedido #${order.id} · ${order.store_name}</h3>
+          ${isAcceptedByMe
+            ? `<span style="background:#E4EEE8;color:var(--green);padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;">✓ Aceptado por ti · Tienda preparando</span>`
+            : `<span style="background:#FEF3D6;color:#8F6214;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;">⏳ Disponible para aceptar</span>`
+          }
+        </div>
+        <p><strong>Cliente:</strong> ${order.customer_name}<br><strong>Dirección:</strong> ${order.delivery_address}<br><strong>Total:</strong> $${Number(order.total).toLocaleString('es-CO')}</p>
+        <div class="delivery-actions">
+          ${isAcceptedByMe
+            ? `<button onclick="updateDeliveryStatus(${order.id}, 'entregado')" style="background:var(--green);color:#fff;">✓ Marcar entregado</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(order.delivery_address)}')">Ver ruta</button>`
+            : `<button onclick="acceptDelivery(${order.id})">✓ Aceptar entrega</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(order.delivery_address)}')">Ver dirección</button>`
+          }
+        </div>
+      </article>`;
+    }).join('');
   }catch(error){ list.innerHTML = `<p class="error">${error.message}</p>`; }
 }
+function getAcceptedOrdersMap(){
+  try{ return JSON.parse(localStorage.getItem('inventario_accepted_orders') || '{}'); }catch(_e){ return {}; }
+}
+function saveAcceptedOrderLocal(orderId, data){
+  try{
+    const map = getAcceptedOrdersMap();
+    map[orderId] = data;
+    localStorage.setItem('inventario_accepted_orders', JSON.stringify(map));
+  }catch(_e){}
+}
 async function acceptDelivery(orderId){
+  const acceptedMap = getAcceptedOrdersMap();
+  if(acceptedMap[orderId] && courier && acceptedMap[orderId].courier_id !== courier.id){
+    alert('Este pedido ya fue aceptado por otro domiciliario.');
+    loadDeliveries();
+    return;
+  }
   const response = await fetch(`${API_URL}/couriers/me/orders/${orderId}/accept`, {method:'POST', headers:{Authorization:`Bearer ${token}`} });
-  if(!response.ok){ alert((await response.json()).detail || 'No se pudo aceptar la entrega'); return; }
+  if(!response.ok){
+    const err = await response.json().catch(() => ({}));
+    alert(err.detail || 'No se pudo aceptar la entrega');
+    loadDeliveries();
+    return;
+  }
+  if(courier){
+    saveAcceptedOrderLocal(orderId, {
+      courier_id: courier.id,
+      courier_name: courier.name,
+      courier_phone: courier.phone,
+      courier_vehicle: courier.vehicle_type || 'moto',
+      accepted_at: new Date().toISOString()
+    });
+  }
   loadDeliveries();
 }
 async function updateDeliveryStatus(orderId, status){

@@ -60,8 +60,8 @@
   .store-option .price{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:17px;}
   .store-option .stock{font-size:11px;color:var(--muted);}
   .quantity-control{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:8px;}
-  .quantity-control button{width:24px;height:24px;border:1px solid var(--line);border-radius:50%;background:var(--cream);color:var(--navy);font-weight:700;cursor:pointer;}
-  .quantity-control input{width:42px;padding:4px;border:1px solid var(--line);border-radius:4px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .quantity-control button{width:26px;height:26px;border:1px solid var(--line);border-radius:50%;background:var(--cream);color:var(--navy);font-weight:700;cursor:pointer;}
+  .quantity-control input{width:76px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:13px;}
   .add-btn{margin-top:8px;background:var(--amber);border:none;color:var(--navy);padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;}
 
   .cart-bar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 28px));background:var(--navy);color:#fff;padding:14px 18px;display:none;justify-content:space-between;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.2);border-radius:16px;z-index:30;}
@@ -822,7 +822,7 @@ async function openDetail(productId, name){
         ${isWeight ? `
         <div style="margin-top:6px;display:flex;align-items:center;justify-content:flex-end;gap:4px;">
           <span style="font-size:11px;color:var(--muted);">Valor $:</span>
-          <input type="number" id="amount-${s.store_id}" min="100" step="100" value="${Math.round(s.price)}" placeholder="Ej: 7000" style="width:86px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;" oninput="onDetailAmountInput(${s.store_id}, ${s.price}, ${s.stock})">
+          <input type="number" id="amount-${s.store_id}" min="100" step="100" value="${Math.round(s.price)}" placeholder="Ej: 7000" style="width:104px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13px;" oninput="onDetailAmountInput(${s.store_id}, ${s.price}, ${s.stock})">
         </div>` : ''}
         <button class="add-btn" onclick="addToCart(${productId}, '${name.replace(/'/g,"")}', ${s.store_id}, '${s.store_name.replace(/'/g,"")}', ${s.price}, document.getElementById('quantity-${s.store_id}').value, ${s.stock}, ${JSON.stringify(s.address || '').replace(/"/g, '&quot;')}, ${Boolean(s.offers_delivery)}, '${unit}')">Agregar</button>
       </div>

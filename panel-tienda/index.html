@@ -231,11 +231,12 @@
       <div class="page-header">
         <div>
           <h2>Pedidos</h2>
-          <div class="sub">Compras y domicilios recibidos por tu tienda</div>
+          <div class="sub">Compras y domicilios recibidos por tu tienda — prepara los productos cuando se asigne domiciliario</div>
         </div>
+        <button class="btn small secondary" onclick="loadOrders()">↻ Actualizar pedidos</button>
       </div>
       <table>
-        <thead><tr><th>#</th><th>Cliente</th><th>Entrega</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Cliente</th><th>Productos a preparar</th><th>Entrega y Domiciliario</th><th>Total</th><th>Estado</th><th></th></tr></thead>
         <tbody id="orders-tbody"></tbody>
       </table>
     </section>
@@ -1163,19 +1164,64 @@ async function saveInventoryItem(){
   loadStoreSummary();
 }
 
+let ordersRefreshTimer = null;
+
 async function loadOrders(){
+  if(inventoryItems.length === 0){
+    try{
+      const invRes = await authFetch('/stores/me/inventory');
+      if(invRes.ok) inventoryItems = enrichInventoryWithMeta(await invRes.json());
+    }catch(_e){}
+  }
+  const prodNameMap = {};
+  inventoryItems.forEach(item => {
+    if(item.product) prodNameMap[item.product_id] = item.product.name;
+  });
+
+  let acceptedMap = {};
+  try{ acceptedMap = JSON.parse(localStorage.getItem('inventario_accepted_orders') || '{}'); }catch(_e){ acceptedMap = {}; }
+
   const res = await authFetch('/orders/me');
   const orders = await res.json();
   const tbody = document.getElementById('orders-tbody');
   if(orders.length === 0){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><span class="eyebrow">Sin pedidos</span><p>Aquí aparecerán los pedidos de tus clientes.</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="eyebrow">Sin pedidos</span><p>Aquí aparecerán los pedidos de tus clientes.</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = orders.map(o => `
+  tbody.innerHTML = orders.map(o => {
+    const localAcc = acceptedMap[o.id];
+    const hasCourier = Boolean(
+      o.courier_accepted === true ||
+      o.status === 'en_camino' ||
+      (o.status === 'entregado' && o.courier_id) ||
+      localAcc
+    );
+    const courierName = o.courier_name || (localAcc && localAcc.courier_name) || 'Domiciliario confirmado';
+    const courierPhone = o.courier_phone || (localAcc && localAcc.courier_phone) || '';
+    const itemsText = (o.items || []).map(it => {
+      const pName = prodNameMap[it.product_id] || `Producto #${it.product_id}`;
+      return `<strong>${formatQuantity(it.quantity)} ${it.unit || 'unidad'}</strong> de ${pName}`;
+    }).join('<br>') || '—';
+
+    let deliveryHtml = '<strong>Recoge en tienda</strong><br><span style="color:var(--green);font-size:12px;">✓ Preparar para entrega en mostrador</span>';
+    if(o.delivery_address){
+      let courierBadge = '';
+      if(o.status === 'entregado'){
+        courierBadge = `<div style="margin-top:5px;color:var(--green);font-size:12px;font-weight:600;">✓ Entregado por ${courierName}</div>`;
+      } else if(hasCourier){
+        courierBadge = `<div style="margin-top:6px;display:inline-block;background:#E4EEE8;color:var(--green);padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;">🛵 Ya tiene domiciliario (${courierName}${courierPhone ? ' · ' + courierPhone : ''}) — ¡Ve preparando los productos!</div>`;
+      } else if(o.status !== 'cancelado'){
+        courierBadge = `<div style="margin-top:6px;display:inline-block;background:#FEF3D6;color:#8F6214;padding:4px 9px;border-radius:6px;font-size:12px;font-weight:600;">⏳ Esperando que un domiciliario acepte</div>`;
+      }
+      deliveryHtml = `<div>Domicilio: ${o.delivery_address}</div>${courierBadge}`;
+    }
+
+    return `
     <tr>
       <td class="mono">#${o.id}</td>
       <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
-      <td>${o.delivery_address ? 'Domicilio: ' + o.delivery_address : 'Recoge en tienda'}</td>
+      <td style="font-size:13px;line-height:1.45;">${itemsText}</td>
+      <td>${deliveryHtml}</td>
       <td class="mono">$${o.total.toLocaleString('es-CO')}</td>
       <td><span class="status-pill status-${o.status}">${o.status.replace('_',' ')}</span></td>
       <td>
@@ -1191,7 +1237,16 @@ async function loadOrders(){
         }
       </td>
     </tr>
-  `).join('');
+  `}).join('');
+
+  clearInterval(ordersRefreshTimer);
+  if(document.getElementById('view-orders').style.display !== 'none'){
+    ordersRefreshTimer = setInterval(() => {
+      if(document.getElementById('view-orders').style.display !== 'none' && TOKEN){
+        loadOrders();
+      }
+    }, 8000);
+  }
 }
 
 async function updateOrderStatus(orderId, status){

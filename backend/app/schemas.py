@@ -258,6 +258,11 @@ class OrderOut(BaseModel):
     status: OrderStatus
     total: float
     created_at: datetime
+    courier_id: Optional[int] = None
+    courier_accepted: bool = False
+    courier_name: Optional[str] = None
+    courier_phone: Optional[str] = None
+    courier_vehicle: Optional[str] = None
     items: List[OrderItemOut]
 
     class Config:

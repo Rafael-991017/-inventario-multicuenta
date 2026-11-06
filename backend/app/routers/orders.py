@@ -43,9 +43,6 @@ def create_order(
 
     for item in inventory_changes:
         collection("inventory").document(str(item["id"])).set(item)
-    assigned_courier = None
-    if order_in.delivery_address:
-        assigned_courier = next((courier for courier in list_collection("couriers") if courier.get("available")), None)
     customer_id = current_customer["id"] if current_customer else order_in.customer_id
     customer_email = (
         current_customer["email"]
@@ -58,8 +55,12 @@ def create_order(
              "customer_name": order_in.customer_name, "customer_phone": order_in.customer_phone,
              "delivery_address": order_in.delivery_address,
              "payment_method": order_in.payment_method,
-             "status": "confirmado" if assigned_courier else "pendiente",
-             "courier_id": assigned_courier["id"] if assigned_courier else None,
+             "status": "pendiente",
+             "courier_id": None,
+             "courier_accepted": False,
+             "courier_name": None,
+             "courier_phone": None,
+             "courier_vehicle": None,
              "total": total, "created_at": datetime.utcnow(), "items": order_items}
     collection("orders").document(str(order["id"])).set(order)
     return {"id": order["id"], "store_id": order["store_id"],
@@ -68,8 +69,22 @@ def create_order(
 
 @router.get("/me", response_model=List[schemas.OrderOut])
 def list_my_orders(current_store: dict = Depends(auth.get_current_store), db=Depends(get_db)):
-    orders = [order for order in list_collection("orders")
-              if order.get("store_id") == current_store["id"]]
+    couriers_map = {c["id"]: c for c in list_collection("couriers")}
+    orders = []
+    for order in list_collection("orders"):
+        if order.get("store_id") != current_store["id"]:
+            continue
+        cid = order.get("courier_id")
+        is_accepted = bool(order.get("courier_accepted")) or order.get("status") == "en_camino" or (order.get("status") == "entregado" and cid is not None)
+        courier_obj = couriers_map.get(cid) if (cid and is_accepted) else None
+        orders.append({
+            **order,
+            "courier_id": cid if is_accepted else None,
+            "courier_accepted": is_accepted,
+            "courier_name": order.get("courier_name") or (courier_obj.get("name") if courier_obj else None),
+            "courier_phone": order.get("courier_phone") or (courier_obj.get("phone") if courier_obj else None),
+            "courier_vehicle": order.get("courier_vehicle") or (courier_obj.get("vehicle_type") if courier_obj else None),
+        })
     return sorted(orders, key=lambda order: order.get("created_at", datetime.min), reverse=True)
 
 
