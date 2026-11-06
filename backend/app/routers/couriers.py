@@ -6,6 +6,17 @@ from ..database import collection, find_by_field, list_collection, get_db
 router = APIRouter(prefix="/couriers", tags=["Domiciliarios"])
 
 
+def _ensure_courier_approved(courier: dict) -> None:
+    status_val = courier.get("approval_status")
+    if not status_val:
+        status_val = "aprobado" if courier.get("approved", True) else "pendiente"
+    if status_val != "aprobado":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu cuenta de domiciliario aún no ha sido aprobada por el administrador.",
+        )
+
+
 @router.get("/me", response_model=schemas.CourierOut)
 def get_my_courier(current_courier: dict = Depends(auth.get_current_courier)):
     return current_courier
@@ -17,6 +28,7 @@ def update_availability(
     current_courier: dict = Depends(auth.get_current_courier),
     db=Depends(get_db),
 ):
+    _ensure_courier_approved(current_courier)
     reference = collection("couriers").document(str(current_courier["id"]))
     reference.update({"available": available})
     return {**current_courier, "available": available}
@@ -39,6 +51,7 @@ def update_location(
 @router.get("/me/orders")
 def available_orders(current_courier: dict = Depends(auth.get_current_courier), db=Depends(get_db)):
     """Pedidos a domicilio libres y pedidos ya aceptados por este domiciliario."""
+    _ensure_courier_approved(current_courier)
     result = []
     for order in list_collection("orders"):
         if not order.get("delivery_address"):
@@ -57,6 +70,7 @@ def accept_order(
     current_courier: dict = Depends(auth.get_current_courier),
     db=Depends(get_db),
 ):
+    _ensure_courier_approved(current_courier)
     reference = collection("orders").document(str(order_id))
     snapshot = reference.get()
     if not snapshot.exists:
@@ -77,6 +91,7 @@ def update_delivery_status(
     current_courier: dict = Depends(auth.get_current_courier),
     db=Depends(get_db),
 ):
+    _ensure_courier_approved(current_courier)
     allowed = {"en_camino", "entregado", "cancelado"}
     if status not in allowed:
         raise HTTPException(400, "Estado de entrega no válido")

@@ -6,6 +6,7 @@ from .routers import stores as stores_router
 from .routers import products as products_router
 from .routers import orders as orders_router
 from .routers import couriers as couriers_router
+from .routers import admin as admin_router
 
 app = FastAPI(
     title="API Inventario Multi-Tienda",
@@ -37,6 +38,7 @@ app.include_router(stores_router.router)
 app.include_router(products_router.router)
 app.include_router(orders_router.router)
 app.include_router(couriers_router.router)
+app.include_router(admin_router.router)
 
 
 @app.get("/")

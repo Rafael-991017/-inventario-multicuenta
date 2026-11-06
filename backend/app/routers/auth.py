@@ -44,16 +44,24 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
 
 @router.post("/courier/register", response_model=schemas.CourierOut, status_code=201)
 def register_courier(courier_in: schemas.CourierCreate, db=Depends(get_db)):
+    cedula_clean = "".join(ch for ch in (courier_in.cedula or "") if ch.isdigit())
+    if not (6 <= len(cedula_clean) <= 11):
+        raise HTTPException(400, "Ingresa una Cédula de Ciudadanía válida de Colombia (entre 6 y 11 dígitos)")
     if find_by_field("couriers", "email", str(courier_in.email)):
         raise HTTPException(400, "Ya existe un domiciliario registrado con ese correo")
+    if find_by_field("couriers", "cedula", cedula_clean):
+        raise HTTPException(400, "Ya existe un domiciliario registrado con esa Cédula de Ciudadanía")
     courier = {
         "id": next_id("couriers"),
-        "name": courier_in.name,
-        "email": str(courier_in.email),
+        "name": courier_in.name.strip(),
+        "cedula": cedula_clean,
+        "email": str(courier_in.email).strip().lower(),
         "hashed_password": auth.hash_password(courier_in.password),
-        "phone": courier_in.phone,
+        "phone": courier_in.phone.strip(),
         "vehicle_type": courier_in.vehicle_type,
         "available": False,
+        "approval_status": "pendiente",
+        "approved": False,
     }
     collection("couriers").document(str(courier["id"])).set(courier)
     return courier
@@ -61,11 +69,42 @@ def register_courier(courier_in: schemas.CourierCreate, db=Depends(get_db)):
 
 @router.post("/courier/login", response_model=schemas.CourierToken)
 def login_courier(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    courier = find_by_field("couriers", "email", form_data.username)
+    email_clean = form_data.username.strip().lower()
+    courier = find_by_field("couriers", "email", email_clean) or find_by_field("couriers", "email", form_data.username.strip())
     if not courier or not auth.verify_password(form_data.password, courier["hashed_password"]):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
+
+    approval_status = courier.get("approval_status")
+    if not approval_status:
+        approval_status = "aprobado" if courier.get("approved", True) else "pendiente"
+
+    if approval_status == "pendiente" or courier.get("approved") is False:
+        raise HTTPException(
+            status_code=403,
+            detail="Tu cuenta está pendiente de revisión y aprobación por el administrador.",
+        )
+    if approval_status == "rechazado":
+        raise HTTPException(
+            status_code=403,
+            detail="Tu solicitud de cuenta como domiciliario fue rechazada por el administrador.",
+        )
+
+    courier["approval_status"] = approval_status
+    courier["approved"] = True
     token = auth.create_access_token({"sub": str(courier["id"]), "role": "courier"})
     return {"access_token": token, "courier": courier}
+
+
+@router.post("/admin/login", response_model=schemas.AdminToken)
+def login_admin(form_data: OAuth2PasswordRequestForm = Depends()):
+    email_input = form_data.username.strip().lower()
+    if email_input != auth.ADMIN_EMAIL.lower() or form_data.password != auth.ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Credenciales de administrador incorrectas")
+    token = auth.create_access_token({"sub": auth.ADMIN_EMAIL.lower(), "role": "admin"})
+    return {
+        "access_token": token,
+        "admin": {"email": auth.ADMIN_EMAIL.lower(), "name": "Administrador General"},
+    }
 
 
 @router.post("/customer/register", response_model=schemas.CustomerOut, status_code=201)

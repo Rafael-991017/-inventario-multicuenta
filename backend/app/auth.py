@@ -13,6 +13,9 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "cambia-esta-clave-solo-para-desarrollo
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 día
 
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@inventario.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin1234")
+
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/customer/login", auto_error=False)
@@ -110,3 +113,19 @@ def get_optional_customer(
         return find_by_field("customers", "id", int(customer_id))
     except (JWTError, ValueError):
         return None
+
+
+def get_current_admin(token: str = Depends(oauth2_scheme)) -> dict:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar la sesión de administrador",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email is None or payload.get("role") != "admin":
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    return {"email": email, "name": "Administrador"}

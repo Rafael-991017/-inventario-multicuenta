@@ -366,6 +366,9 @@ async function submitCustomerAuth(){
         const data = await loginRes.json();
         customerToken = data.access_token;
         customerProfile = data.customer;
+        const accounts = getLocalCustomers().filter(acc => acc.email !== email);
+        accounts.push({...customerProfile, password});
+        saveLocalCustomers(accounts);
       }
     }
 

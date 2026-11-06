@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administrador · Inventario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A41; --navy-light:#263B59; --cream:#F7F5F0; --paper:#FFFFFF;
+    --amber:#E0A458; --amber-dark:#C4863C; --green:#3F6C51; --red:#B14A42;
+    --ink:#1B2A41; --muted:#6B7280; --line:#E4E0D6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink)}
+  h1,h2,h3{font-family:'Sora',sans-serif;margin:0}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--navy)}
+  .login-card{background:var(--paper);padding:38px 34px;border-radius:10px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-dark);margin-bottom:8px;display:block}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;font-size:14px;background:var(--cream);color:var(--ink);font-family:inherit}
+  .primary{width:100%;padding:12px;background:var(--amber);color:var(--navy);border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px}
+  .secondary-login{width:100%;padding:11px;background:transparent;color:var(--navy);border:1.5px solid var(--line);border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
+  .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none}
+  .hint-box{margin-top:14px;padding:10px 12px;background:var(--cream);border:1px solid var(--line);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.5}
+
+  #admin-app{display:none;min-height:100vh}
+  .sidebar{width:240px;background:var(--navy);color:#fff;position:fixed;top:0;left:0;bottom:0;padding:28px 0;display:flex;flex-direction:column}
+  .sidebar .brand{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .sidebar .brand .eyebrow{color:var(--amber);margin-bottom:4px}
+  .sidebar .brand .title{font-family:'Sora',sans-serif;font-weight:700;font-size:17px}
+  .nav-item{padding:12px 24px;cursor:pointer;font-size:14px;color:rgba(255,255,255,.7);border-left:3px solid transparent}
+  .nav-item:hover{color:#fff;background:rgba(255,255,255,.04)}
+  .nav-item.active{color:#fff;background:var(--navy-light);border-left-color:var(--amber);font-weight:600}
+  .nav-item.logout{margin-top:auto;color:rgba(255,255,255,.55);border-top:1px solid rgba(255,255,255,.1);padding-top:18px}
+
+  main{margin-left:240px;padding:34px 42px;max-width:1260px}
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line);gap:14px;flex-wrap:wrap}
+  .page-header h2{font-size:24px}
+  .page-header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:24px}
+  .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}
+  .summary-card .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+  .summary-card .value{font:700 28px 'IBM Plex Mono',monospace;margin-top:8px;color:var(--ink)}
+  .summary-card.warning .value{color:var(--amber-dark)}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .toolbar input{width:min(360px,100%);padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--paper);font-size:13px}
+  .btn{padding:9px 14px;background:var(--amber);color:var(--navy);border:none;border-radius:6px;font-weight:600;font-size:12px;cursor:pointer}
+  .btn.approve{background:var(--green);color:#fff}
+  .btn.reject{background:var(--red);color:#fff}
+  .btn.secondary{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
+
+  table{width:100%;background:var(--paper);border-radius:8px;border-collapse:collapse;overflow:hidden;border:1px solid var(--line)}
+  th{text-align:left;padding:13px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:var(--cream);font-weight:600;border-bottom:1px solid var(--line)}
+  td{padding:14px 16px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+
+  .pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .pill-pendiente{background:#FEF3D6;color:#8F6214}
+  .pill-aprobado{background:#E4EEE8;color:var(--green)}
+  .pill-rechazado{background:#F8E5E3;color:var(--red)}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+
+  @media(max-width:760px){
+    .sidebar{width:76px}
+    .sidebar .brand .eyebrow,.sidebar .brand .title,.nav-item{font-size:0}
+    .nav-item{padding:16px 0;text-align:center}
+    .nav-item::first-letter{font-size:18px}
+    main{margin-left:76px;padding:20px 14px}
+    .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    table{display:block;overflow-x:auto;white-space:nowrap}
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <span class="eyebrow">Administración General · Colombia</span>
+    <h1>Acceso Admin</h1>
+    <p style="color:var(--muted);font-size:13px;margin:6px 0 20px;">Supervisa tiendas, clientes y aprueba domiciliarios con su Cédula de Ciudadanía.</p>
+    <div class="field"><label>Correo de administrador</label><input type="email" id="admin-email" value="admin@inventario.com" placeholder="admin@inventario.com"></div>
+    <div class="field"><label>Contraseña</label><input type="password" id="admin-password" placeholder="••••••••"></div>
+    <button class="primary" onclick="loginAdmin()">Entrar al panel</button>
+    <button class="secondary-login" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
+    <p class="error-msg" id="login-error"></p>
+    <div class="hint-box">
+      <strong>Cuenta de administrador por defecto:</strong><br>
+      Correo: <span class="mono">admin@inventario.com</span><br>
+      Contraseña: <span class="mono">admin1234</span>
+    </div>
+  </div>
+</div>
+
+<div id="admin-app">
+  <div class="sidebar">
+    <div class="brand">
+      <span class="eyebrow">Panel Admin</span>
+      <div class="title" id="admin-name-label">Administrador</div>
+    </div>
+    <div class="nav-item active" data-tab="couriers" onclick="switchTab('couriers')">Domiciliarios</div>
+    <div class="nav-item" data-tab="stores" onclick="switchTab('stores')">Tiendas</div>
+    <div class="nav-item" data-tab="customers" onclick="switchTab('customers')">Clientes</div>
+    <div class="nav-item" onclick="window.location.href='perfiles.html'">Perfiles</div>
+    <div class="nav-item logout" onclick="logoutAdmin()">Cerrar sesión</div>
+  </div>
+
+  <main>
+    <div class="page-header">
+      <div>
+        <h2 id="tab-title">Gestión de Domiciliarios</h2>
+        <div class="sub" id="tab-subtitle">Revisa la Cédula de Ciudadanía y aprueba o rechaza las solicitudes de domiciliarios</div>
+      </div>
+      <button class="btn secondary" onclick="loadAdminData()">↻ Actualizar datos</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card"><div class="label">Tiendas registradas</div><div class="value" id="count-stores">0</div></div>
+      <div class="summary-card"><div class="label">Clientes registrados</div><div class="value" id="count-customers">0</div></div>
+      <div class="summary-card"><div class="label">Domiciliarios</div><div class="value" id="count-couriers">0</div></div>
+      <div class="summary-card warning"><div class="label">Pendientes de revisión</div><div class="value" id="count-pending-couriers">0</div></div>
+    </div>
+
+    <!-- Sección Domiciliarios -->
+    <section id="tab-couriers">
+      <div class="toolbar">
+        <strong>Solicitudes y cuentas de domiciliarios</strong>
+        <input type="search" id="search-couriers" placeholder="Buscar por nombre, correo o cédula..." oninput="renderCouriers(this.value)">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Cédula de Ciudadanía (CC)</th>
+            <th>Contacto</th>
+            <th>Vehículo</th>
+            <th>Estado de revisión</th>
+            <th>Acciones del Admin</th>
+          </tr>
+        </thead>
+        <tbody id="couriers-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Sección Tiendas -->
+    <section id="tab-stores" style="display:none;">
+      <div class="toolbar">
+        <strong>Todas las tiendas registradas</strong>
+        <input type="search" id="search-stores" placeholder="Buscar tienda por nombre, municipio o correo..." oninput="renderStores(this.value)">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tienda</th>
+            <th>Correo</th>
+            <th>Teléfono</th>
+            <th>Dirección / Ubicación</th>
+            <th>Servicio domicilio</th>
+          </tr>
+        </thead>
+        <tbody id="stores-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- Sección Clientes -->
+    <section id="tab-customers" style="display:none;">
+      <div class="toolbar">
+        <strong>Todos los clientes registrados</strong>
+        <input type="search" id="search-customers" placeholder="Buscar cliente por nombre, correo o teléfono..." oninput="renderCustomers(this.value)">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre del cliente</th>
+            <th>Correo electrónico</th>
+            <th>Teléfono</th>
+            <th>Dirección registrada</th>
+          </tr>
+        </thead>
+        <tbody id="customers-tbody"></tbody>
+      </table>
+    </section>
+  </main>
+</div>
+
+<script>
+const API_URL = 'https://vent-fast-yxui.onrender.com';
+const LOCAL_COURIERS_KEY = 'inventario_couriers_registry';
+const LOCAL_CUSTOMERS_KEY = 'inventario_customer_accounts';
+
+let adminToken = localStorage.getItem('admin_token');
+let adminProfile = JSON.parse(localStorage.getItem('admin_profile') || 'null');
+let allStores = [];
+let allCustomers = [];
+let allCouriers = [];
+
+function getLocalCouriersRegistry(){
+  try{ return JSON.parse(localStorage.getItem(LOCAL_COURIERS_KEY) || '{}'); }catch(_e){ return {}; }
+}
+function saveLocalCouriersRegistry(reg){
+  try{ localStorage.setItem(LOCAL_COURIERS_KEY, JSON.stringify(reg)); }catch(_e){}
+}
+
+async function loginAdmin(){
+  const email = document.getElementById('admin-email').value.trim().toLowerCase();
+  const password = document.getElementById('admin-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  try{
+    const res = await fetch(`${API_URL}/auth/admin/login`, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+    });
+    if(res.ok){
+      const data = await res.json();
+      adminToken = data.access_token;
+      adminProfile = data.admin;
+    } else if(res.status === 404){
+      if(email !== 'admin@inventario.com' || password !== 'admin1234'){
+        throw new Error('Credenciales de administrador incorrectas');
+      }
+      adminToken = 'local-admin-token';
+      adminProfile = {email, name: 'Administrador General'};
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || 'Credenciales de administrador incorrectas');
+    }
+    localStorage.setItem('admin_token', adminToken);
+    localStorage.setItem('admin_profile', JSON.stringify(adminProfile));
+    enterAdminApp();
+  }catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function enterAdminApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'block';
+  document.getElementById('admin-name-label').textContent = (adminProfile && adminProfile.name) || 'Administrador';
+  const savedTab = localStorage.getItem('admin_active_tab') || 'couriers';
+  switchTab(savedTab);
+  loadAdminData();
+}
+
+function logoutAdmin(){
+  adminToken = null;
+  adminProfile = null;
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_profile');
+  localStorage.removeItem('admin_active_tab');
+  document.getElementById('admin-app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function switchTab(tab){
+  localStorage.setItem('admin_active_tab', tab);
+  document.querySelectorAll('.nav-item[data-tab]').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+  document.getElementById('tab-couriers').style.display = tab === 'couriers' ? 'block' : 'none';
+  document.getElementById('tab-stores').style.display = tab === 'stores' ? 'block' : 'none';
+  document.getElementById('tab-customers').style.display = tab === 'customers' ? 'block' : 'none';
+
+  const titles = {
+    couriers: ['Gestión de Domiciliarios', 'Revisa la Cédula de Ciudadanía y aprueba o rechaza las solicitudes de domiciliarios'],
+    stores: ['Tiendas Registradas', 'Listado completo de todas las tiendas activas en la plataforma'],
+    customers: ['Clientes Registrados', 'Listado de todos los clientes registrados en la aplicación']
+  };
+  if(titles[tab]){
+    document.getElementById('tab-title').textContent = titles[tab][0];
+    document.getElementById('tab-subtitle').textContent = titles[tab][1];
+  }
+}
+
+async function loadAdminData(){
+  let apiStores = [];
+  let apiCustomers = [];
+  let apiCouriers = [];
+
+  try{
+    const res = await fetch(`${API_URL}/admin/overview`, {
+      headers: {'Authorization': `Bearer ${adminToken}`}
+    });
+    if(res.ok){
+      const data = await res.json();
+      apiStores = data.stores || [];
+      apiCustomers = data.customers || [];
+      apiCouriers = data.couriers || [];
+    } else {
+      const storesRes = await fetch(`${API_URL}/stores`);
+      if(storesRes.ok) apiStores = await storesRes.json();
+    }
+  }catch(_e){
+    try{
+      const storesRes = await fetch(`${API_URL}/stores`);
+      if(storesRes.ok) apiStores = await storesRes.json();
+    }catch(_err){}
+  }
+
+  // Combinar con registros locales de respaldo
+  allStores = apiStores;
+
+  const localCustomers = JSON.parse(localStorage.getItem(LOCAL_CUSTOMERS_KEY) || '[]');
+  const customerMap = new Map();
+  apiCustomers.forEach(c => customerMap.set((c.email || '').toLowerCase(), c));
+  localCustomers.forEach(c => {
+    const k = (c.email || '').toLowerCase();
+    if(k && !customerMap.has(k)) customerMap.set(k, c);
+  });
+  allCustomers = Array.from(customerMap.values());
+
+  const localCouriersReg = getLocalCouriersRegistry();
+  const courierMap = new Map();
+  apiCouriers.forEach(c => {
+    const k = (c.email || '').toLowerCase();
+    const local = localCouriersReg[k] || {};
+    courierMap.set(k, {
+      ...c,
+      cedula: (c.cedula && c.cedula !== 'Sin registrar') ? c.cedula : (local.cedula || 'Sin registrar'),
+      approval_status: c.approval_status || local.approval_status || 'pendiente'
+    });
+  });
+  Object.values(localCouriersReg).forEach(c => {
+    const k = (c.email || '').toLowerCase();
+    if(k && !courierMap.has(k)){
+      courierMap.set(k, {
+        id: c.id || 0,
+        name: c.name || 'Domiciliario',
+        cedula: c.cedula || 'Sin registrar',
+        email: c.email,
+        phone: c.phone || '—',
+        vehicle_type: c.vehicle_type || 'moto',
+        available: Boolean(c.available),
+        approval_status: c.approval_status || 'pendiente'
+      });
+    }
+  });
+  allCouriers = Array.from(courierMap.values());
+
+  document.getElementById('count-stores').textContent = allStores.length;
+  document.getElementById('count-customers').textContent = allCustomers.length;
+  document.getElementById('count-couriers').textContent = allCouriers.length;
+  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+
+  renderCouriers(document.getElementById('search-couriers').value);
+  renderStores(document.getElementById('search-stores').value);
+  renderCustomers(document.getElementById('search-customers').value);
+}
+
+function renderCouriers(filter = ''){
+  const q = filter.trim().toLowerCase();
+  const tbody = document.getElementById('couriers-tbody');
+  const filtered = allCouriers.filter(c =>
+    !q ||
+    (c.name || '').toLowerCase().includes(q) ||
+    (c.email || '').toLowerCase().includes(q) ||
+    String(c.cedula || '').toLowerCase().includes(q)
+  );
+  if(filtered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No hay domiciliarios registrados todavía.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(c => {
+    const status = c.approval_status || 'pendiente';
+    const label = status === 'aprobado' ? 'Aprobado' : (status === 'rechazado' ? 'Rechazado' : 'Pendiente de revisión');
+    const safeEmail = (c.email || '').replace(/'/g, "\\'");
+    return `
+      <tr>
+        <td class="mono">#${c.id}</td>
+        <td><strong>${c.name}</strong></td>
+        <td class="mono"><strong>CC ${c.cedula || 'Sin registrar'}</strong></td>
+        <td>${c.email}<br><span style="color:var(--muted);font-size:12px;">Tel: ${c.phone || '—'}</span></td>
+        <td style="text-transform:capitalize;">${c.vehicle_type || 'moto'}</td>
+        <td><span class="pill pill-${status}">${label}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${status !== 'aprobado' ? `<button class="btn approve" onclick="setCourierApproval(${c.id}, '${safeEmail}', 'aprobado')">✓ Aprobar</button>` : ''}
+            ${status !== 'rechazado' ? `<button class="btn reject" onclick="setCourierApproval(${c.id}, '${safeEmail}', 'rechazado')">✕ Rechazar</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function setCourierApproval(courierId, email, newStatus){
+  try{
+    await fetch(`${API_URL}/admin/couriers/${courierId}/approval`, {
+      method:'PATCH',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({status: newStatus})
+    });
+  }catch(_e){}
+
+  // Actualizar registro local también para efecto inmediato
+  const reg = getLocalCouriersRegistry();
+  const key = (email || '').toLowerCase();
+  if(key){
+    reg[key] = {...(reg[key] || {}), email: key, approval_status: newStatus, approved: newStatus === 'aprobado'};
+    saveLocalCouriersRegistry(reg);
+  }
+  allCouriers = allCouriers.map(c => {
+    if(c.id === courierId || (c.email || '').toLowerCase() === key){
+      return {...c, approval_status: newStatus, approved: newStatus === 'aprobado'};
+    }
+    return c;
+  });
+  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+  renderCouriers(document.getElementById('search-couriers').value);
+}
+
+function renderStores(filter = ''){
+  const q = filter.trim().toLowerCase();
+  const tbody = document.getElementById('stores-tbody');
+  const filtered = allStores.filter(s =>
+    !q ||
+    (s.name || '').toLowerCase().includes(q) ||
+    (s.email || '').toLowerCase().includes(q) ||
+    (s.municipality || '').toLowerCase().includes(q) ||
+    (s.neighborhood || '').toLowerCase().includes(q)
+  );
+  if(filtered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No hay tiendas registradas.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => {
+    const loc = [s.address, s.neighborhood, s.municipality, s.department].filter(Boolean).join(', ') || 'Sin dirección';
+    return `
+      <tr>
+        <td class="mono">#${s.id}</td>
+        <td><strong>${s.name}</strong></td>
+        <td>${s.email || '—'}</td>
+        <td class="mono">${s.phone || '—'}</td>
+        <td>${loc}</td>
+        <td>${s.offers_delivery !== false ? '<span class="pill pill-aprobado">Sí ofrece</span>' : '<span class="pill pill-pendiente">Solo tienda</span>'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCustomers(filter = ''){
+  const q = filter.trim().toLowerCase();
+  const tbody = document.getElementById('customers-tbody');
+  const filtered = allCustomers.filter(c =>
+    !q ||
+    (c.name || '').toLowerCase().includes(q) ||
+    (c.email || '').toLowerCase().includes(q) ||
+    (c.phone || '').toLowerCase().includes(q)
+  );
+  if(filtered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No hay clientes registrados todavía.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(c => `
+    <tr>
+      <td class="mono">#${c.id || '—'}</td>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.email}</td>
+      <td class="mono">${c.phone || '—'}</td>
+      <td>${c.address || '—'}</td>
+    </tr>
+  `).join('');
+}
+
+if(adminToken && adminProfile){
+  enterAdminApp();
+}
+</script>
+</body>
+</html>

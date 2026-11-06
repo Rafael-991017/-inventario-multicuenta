@@ -25,14 +25,14 @@ class StoreOut(BaseModel):
     id: int
     name: str
     email: EmailStr
-    address: Optional[str]
-    neighborhood: Optional[str]
-    municipality: Optional[str]
-    department: Optional[str]
-    phone: Optional[str]
-    latitude: Optional[float]
-    longitude: Optional[float]
-    offers_delivery: bool
+    address: Optional[str] = None
+    neighborhood: Optional[str] = None
+    municipality: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    offers_delivery: bool = True
 
     class Config:
         from_attributes = True
@@ -63,6 +63,7 @@ class Token(BaseModel):
 
 class CourierCreate(BaseModel):
     name: str
+    cedula: str
     email: EmailStr
     password: str
     phone: str
@@ -72,16 +73,35 @@ class CourierCreate(BaseModel):
 class CourierOut(BaseModel):
     id: int
     name: str
+    cedula: Optional[str] = None
     email: EmailStr
     phone: str
     vehicle_type: str
     available: bool = False
+    approval_status: str = "pendiente"
+    approved: bool = False
 
 
 class CourierToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
     courier: CourierOut
+
+
+class CourierApprovalUpdate(BaseModel):
+    status: str  # "aprobado" | "rechazado" | "pendiente"
+
+
+# ---------- Admin ----------
+class AdminOut(BaseModel):
+    email: EmailStr
+    name: str = "Administrador"
+
+
+class AdminToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    admin: AdminOut
 
 
 # ---------- Customer ----------
