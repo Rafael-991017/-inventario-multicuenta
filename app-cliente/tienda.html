@@ -182,7 +182,7 @@
 
     <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 8px;padding:10px 12px;background:#EEF6F0;border:1px solid var(--green);border-radius:5px;font-size:12px;line-height:1.45;color:var(--ink);cursor:pointer;">
       <input type="checkbox" id="store-privacy-check" style="width:16px;height:16px;margin-top:2px;accent-color:var(--green);flex:0 0 auto;">
-      <span>Acepto obligatoriamente la <a href="#" onclick="openStorePrivacyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
+      <span>Acepto conscientemente la <a href="#" onclick="openStorePrivacyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
     </label>
 
     <button class="secondary-login" type="button" onclick="goHomeProfiles()">← Volver al inicio</button>
@@ -192,10 +192,10 @@
   </div>
 </div>
 
-<!-- Modal Obligatorio de Política de Privacidad -->
+<!-- Modal de Política de Privacidad -->
 <div class="modal-overlay" id="store-privacy-modal" style="z-index:9999;">
   <div class="modal" style="width:min(600px,100%);max-height:calc(100vh - 32px);overflow-y:auto;border-radius:10px;padding:24px;">
-    <span style="display:inline-block;background:#FDF0DD;color:#9A6318;font:700 11px 'IBM Plex Mono',monospace;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:8px;">Requisito Legal Obligatorio · Colombia</span>
+    <span style="display:inline-block;background:#FDF0DD;color:#9A6318;font:700 11px 'IBM Plex Mono',monospace;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:8px;">Aviso Legal · Colombia</span>
     <h3 style="margin:0 0 12px;font-size:18px;color:var(--navy);">Política de Privacidad y Tratamiento de Datos Personales — Venta Fast</h3>
     <div style="background:var(--cream);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:13px;line-height:1.6;color:var(--ink);text-align:justify;margin-bottom:14px;">
       <p style="margin:0 0 10px;">La presente <strong>Política de Privacidad y Tratamiento de Datos Personales</strong> regula la recolección, almacenamiento, uso, circulación, verificación y supresión de la información registrada por los usuarios de la aplicación multiplataforma <strong>Venta Fast</strong> (tanto en sus versiones para computador personal PC/Web como en dispositivos móviles Android e iOS). Este instrumento jurídico y técnico se estructura en estricto cumplimiento de la <strong>Constitución Política de Colombia (Artículo 15 — Derecho al Habeas Data y a la intimidad)</strong>, la <strong>Ley Estatutaria 1581 de 2012</strong>, el <strong>Decreto Reglamentario 1377 de 2013</strong> (compilado en el <strong>Decreto Único 1074 de 2015</strong>), la <strong>Ley 1266 de 2008</strong> y los estándares internacionales de seguridad de la información <strong>ISO/IEC 27001</strong> e <strong>ISO/IEC 27701</strong>.</p>
@@ -485,7 +485,7 @@ function showError(msg){
 function ensureStorePrivacyAccepted(){
   const chk = document.getElementById('store-privacy-check');
   if(!chk || !chk.checked){
-    showError('Debes aceptar obligatoriamente la Política de Privacidad y Tratamiento de Datos Personales para usar Venta Fast.');
+    showError('Debes aceptar conscientemente la Política de Privacidad y Tratamiento de Datos Personales para usar Venta Fast.');
     openStorePrivacyModal();
     return false;
   }
