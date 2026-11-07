@@ -81,8 +81,13 @@
   .status-cancelado{background:#FBEAE9;color:var(--red);}
 
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.5);align-items:center;justify-content:center;z-index:50;}
-  .modal{background:var(--paper);padding:32px;border-radius:5px;width:400px;max-height:calc(100vh - 32px);overflow-y:auto;}
+  .modal{background:var(--paper);padding:32px;border-radius:5px;width:440px;max-height:calc(100vh - 32px);overflow-y:auto;}
   .modal h3{margin-bottom:18px;font-size:17px;}
+  .profit-preview-box{background:var(--cream);border:1.5px solid var(--line);border-radius:5px;padding:12px 14px;margin-bottom:16px;font-size:13px;}
+  .profit-preview-box.positive{background:#EEF6F0;border-color:var(--green);}
+  .profit-preview-box.negative{background:#FBEAE9;border-color:var(--red);}
+  .profit-preview-row{display:flex;justify-content:space-between;align-items:center;margin:4px 0;}
+  .profit-preview-row strong{font-family:'IBM Plex Mono',monospace;}
   .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px;}
   .summary-grid.four-cols{grid-template-columns:repeat(4,minmax(0,1fr));}
   .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:16px 18px;}
@@ -204,24 +209,24 @@
       <div class="page-header">
         <div>
           <h2>Inventario</h2>
-          <div class="sub">Productos, proveedor, precio de compra, precio de venta y stock disponible</div>
+          <div class="sub">Productos, cuánto cuestan a la tienda, en cuánto se venden y ganancia neta</div>
         </div>
         <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
       </div>
       <div class="summary-grid" aria-label="Resumen del inventario">
         <div class="summary-card"><div class="label">Productos activos</div><div class="value" id="summary-products">0</div></div>
-        <div class="summary-card"><div class="label">Unidades disponibles</div><div class="value" id="summary-units">0</div></div>
+        <div class="summary-card"><div class="label">Costo actual en stock</div><div class="value" id="summary-inventory-cost">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta en stock</div><div class="value" id="summary-inventory-profit" style="color:var(--green);">$0</div></div>
         <div class="summary-card warning"><div class="label">Stock bajo</div><div class="value" id="summary-low-stock">0</div></div>
-        <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="summary-sales-count">0</div></div>
-        <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div></div>
-        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta total</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
+        <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div><div style="font-size:11px;color:var(--muted);margin-top:4px;"><span id="summary-sales-count">0</span> ventas entregadas · <span id="summary-units">0</span> u. disp.</div></div>
+        <div class="summary-card" style="border-color:var(--green);background:#F2F8F4;"><div class="label" style="color:var(--green);">Ganancia neta de ventas</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
       </div>
       <div class="inventory-toolbar">
         <strong>Tu catálogo</strong>
         <input type="search" id="inventory-search" placeholder="Buscar en inventario..." oninput="renderInventory(this.value)">
       </div>
       <table>
-        <thead><tr><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Compra</th><th>Venta</th><th>Ganancia / u.</th><th>Stock</th><th></th></tr></thead>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Costo tienda</th><th>Precio venta</th><th>Ganancia neta / u.</th><th>Ganancia neta stock</th><th>Stock</th><th></th></tr></thead>
         <tbody id="inventory-tbody"></tbody>
       </table>
     </section>
@@ -267,6 +272,7 @@
           <input type="number" id="sale-amount" min="1" step="100" placeholder="Ej: 5500 o 7000" oninput="onSaleAmountChange(this.value)">
           <div id="sale-calc-preview" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
         </div>
+        <div id="sale-profit-preview" class="profit-preview-box positive" style="display:none;"></div>
         <button class="btn" onclick="registerSale()">Confirmar venta</button>
         <p id="sale-message" style="font-size:13px;color:var(--green);margin-top:12px;"></p>
       </div>
@@ -277,7 +283,7 @@
       <div class="page-header">
         <div>
           <h2>Ganancias y Reportes</h2>
-          <div class="sub">Compara a cuánto compraste y a cuánto vendiste por día, semana o mes</div>
+          <div class="sub">Compara cuánto cuesta cada producto a la tienda y en cuánto se vende para calcular tu ganancia neta</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn small" id="period-day" onclick="loadProfits('day')">Hoy (Diario)</button>
@@ -289,11 +295,11 @@
       <div class="summary-grid four-cols">
         <div class="summary-card"><div class="label">Ventas entregadas</div><div class="value" id="profit-sales-count">0</div></div>
         <div class="summary-card"><div class="label">Ingresos (Ventas)</div><div class="value" id="profit-revenue">$0</div></div>
-        <div class="summary-card warning"><div class="label">Costo (Compra)</div><div class="value" id="profit-cost">$0</div></div>
-        <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta</div><div class="value" id="profit-net" style="color:var(--green);">$0</div></div>
+        <div class="summary-card warning"><div class="label">Costo tienda (Compra)</div><div class="value" id="profit-cost">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);background:#F2F8F4;"><div class="label" style="color:var(--green);">Ganancia neta</div><div class="value" id="profit-net" style="color:var(--green);">$0</div></div>
       </div>
       <table>
-        <thead><tr><th>#</th><th>Cliente / Tipo</th><th>Productos vendidos</th><th>Venta</th><th>Costo compra</th><th>Ganancia</th></tr></thead>
+        <thead><tr><th>#</th><th>Cliente / Tipo</th><th>Productos vendidos</th><th>Venta</th><th>Costo tienda</th><th>Ganancia neta</th></tr></thead>
         <tbody id="profits-tbody"></tbody>
       </table>
     </section>
@@ -361,20 +367,41 @@
     </div>
     <div class="field"><label>Categoría (si vas a crear un producto nuevo)</label><input type="text" id="modal-category" placeholder="Ej: Abarrotes, Lácteos"></div>
     <div class="field">
-      <label>Proveedor</label>
+      <label>Proveedor (opcional)</label>
       <input type="text" id="modal-supplier" list="suppliers-datalist" placeholder="Selecciona o escribe el proveedor...">
       <datalist id="suppliers-datalist"></datalist>
     </div>
     <div class="field"><label>Imagen del producto</label><input type="file" id="modal-image-file" accept="image/*" onchange="previewProductImage(this)"><input type="url" id="modal-image-url" placeholder="O pega una URL de imagen" style="margin-top:6px;"><img id="image-preview" alt="Vista previa" style="display:none;width:100%;height:100px;object-fit:cover;border-radius:4px;margin-top:8px;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div class="field"><label>Precio de compra / costo ($)</label><input type="number" id="modal-cost-price" placeholder="Ej: 9000" min="0"></div>
-      <div class="field"><label>Precio de venta ($)</label><input type="number" id="modal-price" placeholder="Ej: 13000" min="0"></div>
+      <div class="field">
+        <label>Tipo de venta</label>
+        <select id="modal-unit" onchange="updateModalProfitPreview()" style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:3px;font-size:14px;background:var(--cream);">
+          <option value="unidad">Por unidad</option>
+          <option value="lb">Por libra (lb)</option>
+          <option value="kg">Por kilogramo (kg)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="modal-stock-label">Stock disponible (unidad)</label>
+        <input type="number" id="modal-stock" placeholder="0" min="0" step="0.01" oninput="updateModalProfitPreview()">
+      </div>
     </div>
-    <div class="field"><label>Stock disponible</label><input type="number" id="modal-stock" placeholder="0" min="0" step="0.01"></div>
-    <div class="field"><label>Tipo de venta</label><select id="modal-unit"><option value="unidad">Por unidad</option><option value="kg">Por kilogramo (kg)</option><option value="lb">Por libra (lb)</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="field">
+        <label id="modal-cost-label">¿Cuánto cuesta a la tienda? ($)</label>
+        <input type="number" id="modal-cost-price" placeholder="Ej: 9000" min="0" oninput="updateModalProfitPreview()">
+      </div>
+      <div class="field">
+        <label id="modal-price-label">¿En cuánto se va a vender? ($)</label>
+        <input type="number" id="modal-price" placeholder="Ej: 13000" min="0" oninput="updateModalProfitPreview()">
+      </div>
+    </div>
+    <div id="modal-profit-preview" class="profit-preview-box">
+      <div style="color:var(--muted);font-size:12px;">Ingresa cuánto le cuesta el producto a la tienda y en cuánto se va a vender para calcular la ganancia neta automáticamente.</div>
+    </div>
     <div style="display:flex;gap:10px;margin-top:8px;">
       <button class="btn secondary" onclick="closeInventoryModal()" style="flex:1;">Cancelar</button>
-      <button class="btn" onclick="saveInventoryItem()" style="flex:1;">Guardar</button>
+      <button class="btn" onclick="saveInventoryItem()" style="flex:1;">Guardar producto</button>
     </div>
   </div>
 </div>
@@ -543,6 +570,7 @@ async function loadStoreSummary(){
       if(invRes.ok) inventoryItems = enrichInventoryWithMeta(await invRes.json());
     }catch(_e){}
   }
+  updateInventorySummary();
   const summary = await computeStoreSummary('all');
   document.getElementById('summary-sales-count').textContent = summary.sales_count;
   document.getElementById('summary-sales-total').textContent = `$${Number(summary.sales_total).toLocaleString('es-CO')}`;
@@ -551,22 +579,24 @@ async function loadStoreSummary(){
 }
 
 async function computeStoreSummary(period = 'all'){
-  try{
-    const response = await authFetch(`/stores/me/summary?period=${encodeURIComponent(period)}`);
-    if(response.ok){
-      const data = await response.json();
-      if(typeof data.profit_total === 'number' && Array.isArray(data.history)){
-        return data;
-      }
-    }
-  }catch(_e){}
-
-  // Cálculo de respaldo directo desde /orders/me + costos del inventario
+  // Obtenemos los pedidos reales de la tienda y los costos actuales del inventario
   let orders = [];
   try{
     const res = await authFetch('/orders/me');
     if(res.ok) orders = await res.json();
   }catch(_e){}
+
+  if(orders.length === 0){
+    try{
+      const response = await authFetch(`/stores/me/summary?period=${encodeURIComponent(period)}`);
+      if(response.ok){
+        const data = await response.json();
+        if(typeof data.profit_total === 'number' && Array.isArray(data.history)){
+          return data;
+        }
+      }
+    }catch(_e){}
+  }
 
   const now = new Date();
   let cutoff = null;
@@ -599,8 +629,9 @@ async function computeStoreSummary(period = 'all'){
     const labels = [];
     (o.items || []).forEach(it => {
       const info = invMap[it.product_id] || {};
+      const localMetaCost = meta[it.product_id] ? Number(meta[it.product_id].cost_price || 0) : 0;
       const qty = Number(it.quantity) || 0;
-      const unitCost = Number(it.cost_price || info.cost_price || 0);
+      const unitCost = Number(it.cost_price || info.cost_price || localMetaCost || 0);
       cost += unitCost * qty;
       const unit = it.unit || info.unit || 'un.';
       labels.push(`${formatQuantity(qty)} ${unit} ${info.name || ('Prod #' + it.product_id)}`);
@@ -696,6 +727,15 @@ function updateInventorySummary(){
   document.getElementById('summary-products').textContent = inventoryItems.length;
   document.getElementById('summary-units').textContent = inventoryItems.reduce((sum, item) => sum + item.stock, 0).toLocaleString('es-CO');
   document.getElementById('summary-low-stock').textContent = inventoryItems.filter(item => item.stock <= 5).length;
+  const totalInvCost = Math.round(inventoryItems.reduce((sum, item) => sum + (Number(item.cost_price || 0) * Number(item.stock || 0)), 0));
+  const totalInvProfit = Math.round(inventoryItems.reduce((sum, item) => sum + ((Number(item.price || 0) - Number(item.cost_price || 0)) * Number(item.stock || 0)), 0));
+  const invCostEl = document.getElementById('summary-inventory-cost');
+  if(invCostEl) invCostEl.textContent = `$${totalInvCost.toLocaleString('es-CO')}`;
+  const invProfitEl = document.getElementById('summary-inventory-profit');
+  if(invProfitEl){
+    invProfitEl.textContent = `${totalInvProfit >= 0 ? '' : '-'}$${Math.abs(totalInvProfit).toLocaleString('es-CO')}`;
+    invProfitEl.style.color = totalInvProfit >= 0 ? 'var(--green)' : 'var(--red)';
+  }
 }
 
 function renderInventory(search = ''){
@@ -707,21 +747,27 @@ function renderInventory(search = ''){
   );
   const tbody = document.getElementById('inventory-tbody');
   if(items.length === 0){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto para empezar a vender.'}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto indicando cuánto cuesta a la tienda y en cuánto lo vas a vender.'}</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(item => {
     const unitSuffix = item.unit && item.unit !== 'unidad' ? ` / ${item.unit}` : '';
     const cost = Number(item.cost_price || 0);
-    const unitProfit = Number(item.price || 0) - cost;
+    const price = Number(item.price || 0);
+    const stock = Number(item.stock || 0);
+    const unitProfit = price - cost;
+    const stockProfit = Math.round(unitProfit * stock);
+    const marginPct = cost > 0 ? Math.round((unitProfit / cost) * 100) : null;
+    const marginBadge = marginPct !== null ? `<span style="display:block;font-size:11px;font-weight:500;opacity:.85;">(${marginPct >= 0 ? '+' : ''}${marginPct}%)</span>` : '';
     return `
     <tr>
       <td>${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:42px;height:42px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;">` : ''}${item.product.name}</td>
       <td>${item.product.category || '—'}</td>
       <td>${item.supplier || '<span style="color:var(--muted);">Sin proveedor</span>'}</td>
       <td class="mono" style="color:var(--muted);">$${cost.toLocaleString('es-CO')}${unitSuffix}</td>
-      <td class="mono">$${item.price.toLocaleString('es-CO')}${unitSuffix}</td>
-      <td class="mono" style="color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">$${unitProfit.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono">$${price.toLocaleString('es-CO')}${unitSuffix}</td>
+      <td class="mono" style="color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">${unitProfit >= 0 ? '+' : '-'}$${Math.abs(unitProfit).toLocaleString('es-CO')}${unitSuffix}${marginBadge}</td>
+      <td class="mono" style="color:${stockProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">${stockProfit >= 0 ? '+' : '-'}$${Math.abs(stockProfit).toLocaleString('es-CO')}</td>
       <td><span class="stock-tag ${stockClass(item.stock)}"><span class="stock-dot"></span>${formatQuantity(item.stock)} ${item.unit || 'unidad'}</span></td>
       <td><button class="btn small" onclick='openEditInventoryModal(${JSON.stringify(item)})'>Editar</button> <button class="btn small secondary" onclick="deleteInventoryItem(${item.product_id})">Quitar</button></td>
     </tr>
@@ -929,10 +975,17 @@ function selectSaleProduct(productId){
   selectedSaleItem = inventoryItems.find(item => item.product_id === productId);
   const unit = selectedSaleItem.unit || 'unidad';
   const isWeight = unit !== 'unidad';
+  const cost = Number(selectedSaleItem.cost_price || 0);
+  const unitProfit = Number(selectedSaleItem.price || 0) - cost;
   document.getElementById('sale-product-search').value = selectedSaleItem.product.name;
   document.getElementById('sale-suggestions').style.display = 'none';
   document.getElementById('sale-selected').style.display = 'flex';
-  document.getElementById('sale-selected').innerHTML = `<span>Disponible: ${formatQuantity(selectedSaleItem.stock)} ${unit}</span><span class="sale-unit">$${selectedSaleItem.price.toLocaleString('es-CO')} / ${unit}</span>`;
+  document.getElementById('sale-selected').innerHTML = `
+    <div>
+      <div>Disponible: <strong>${formatQuantity(selectedSaleItem.stock)} ${unit}</strong></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Costo tienda: $${cost.toLocaleString('es-CO')} / ${unit} · Ganancia neta: <strong style="color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};">${unitProfit >= 0 ? '+' : '-'}$${Math.abs(unitProfit).toLocaleString('es-CO')} / ${unit}</strong></div>
+    </div>
+    <span class="sale-unit">$${selectedSaleItem.price.toLocaleString('es-CO')} / ${unit}</span>`;
   document.getElementById('sale-unit-display').value = unit;
   document.getElementById('sale-quantity-label').textContent = `Cantidad vendida (${unit})`;
   const input = document.getElementById('sale-quantity');
@@ -946,24 +999,25 @@ function selectSaleProduct(productId){
     amountField.style.display = 'block';
     const defaultQty = parseFloat(input.value) || 0;
     amountInput.value = selectedSaleItem.price ? Math.round(defaultQty * selectedSaleItem.price) : '';
-    updateSalePreview();
   } else {
     amountField.style.display = 'none';
     amountInput.value = '';
     document.getElementById('sale-calc-preview').textContent = '';
   }
+  updateSalePreview();
 }
 
 function onSaleQuantityChange(val){
   if(!selectedSaleItem) return;
   const unit = selectedSaleItem.unit || 'unidad';
-  if(unit === 'unidad') return;
   const qty = parseFloat(val);
-  const amountInput = document.getElementById('sale-amount');
-  if(Number.isFinite(qty) && qty > 0 && selectedSaleItem.price > 0){
-    amountInput.value = Math.round(qty * selectedSaleItem.price);
-  } else {
-    amountInput.value = '';
+  if(unit !== 'unidad'){
+    const amountInput = document.getElementById('sale-amount');
+    if(Number.isFinite(qty) && qty > 0 && selectedSaleItem.price > 0){
+      amountInput.value = Math.round(qty * selectedSaleItem.price);
+    } else {
+      amountInput.value = '';
+    }
   }
   updateSalePreview();
 }
@@ -985,17 +1039,42 @@ function onSaleAmountChange(val){
 
 function updateSalePreview(){
   const preview = document.getElementById('sale-calc-preview');
-  if(!preview) return;
-  if(!selectedSaleItem || (selectedSaleItem.unit || 'unidad') === 'unidad'){ preview.textContent = ''; return; }
-  const unit = selectedSaleItem.unit || 'unidad';
-  const qty = parseFloat(document.getElementById('sale-quantity').value) || 0;
-  const total = Math.round(qty * selectedSaleItem.price);
-  const remaining = Math.max(0, selectedSaleItem.stock - qty);
-  if(qty <= 0){
-    preview.textContent = '';
+  const profitBox = document.getElementById('sale-profit-preview');
+  if(!selectedSaleItem){
+    if(preview) preview.textContent = '';
+    if(profitBox) profitBox.style.display = 'none';
     return;
   }
-  preview.innerHTML = `Se descontarán <strong>${formatQuantity(qty)} ${unit}</strong> del stock (quedarán <strong>${formatQuantity(remaining)} ${unit}</strong>) · Total: <strong>$${total.toLocaleString('es-CO')}</strong>`;
+  const unit = selectedSaleItem.unit || 'unidad';
+  const qty = parseFloat(document.getElementById('sale-quantity').value) || 0;
+  if(qty <= 0){
+    if(preview) preview.textContent = '';
+    if(profitBox) profitBox.style.display = 'none';
+    return;
+  }
+  const totalSale = Math.round(qty * Number(selectedSaleItem.price || 0));
+  const totalCost = Math.round(qty * Number(selectedSaleItem.cost_price || 0));
+  const netProfit = totalSale - totalCost;
+  const remaining = Math.max(0, selectedSaleItem.stock - qty);
+  if(preview){
+    if(unit !== 'unidad'){
+      preview.innerHTML = `Se descontarán <strong>${formatQuantity(qty)} ${unit}</strong> del stock (quedarán <strong>${formatQuantity(remaining)} ${unit}</strong>) · Total: <strong>$${totalSale.toLocaleString('es-CO')}</strong>`;
+    } else {
+      preview.textContent = '';
+    }
+  }
+  if(profitBox){
+    profitBox.style.display = 'block';
+    profitBox.className = `profit-preview-box ${netProfit >= 0 ? 'positive' : 'negative'}`;
+    profitBox.innerHTML = `
+      <div class="profit-preview-row"><span>Total a cobrar al cliente:</span><strong>$${totalSale.toLocaleString('es-CO')}</strong></div>
+      <div class="profit-preview-row" style="color:var(--muted);"><span>Costo para la tienda (${formatQuantity(qty)} ${unit}):</span><strong>$${totalCost.toLocaleString('es-CO')}</strong></div>
+      <div class="profit-preview-row" style="border-top:1px solid var(--line);padding-top:6px;margin-top:6px;color:${netProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">
+        <span>Ganancia neta de esta venta:</span>
+        <strong>${netProfit >= 0 ? '+' : '-'}$${Math.abs(netProfit).toLocaleString('es-CO')}</strong>
+      </div>
+    `;
+  }
 }
 
 async function registerSale(){
@@ -1008,13 +1087,16 @@ async function registerSale(){
     alert('Indica una cantidad válida dentro del stock disponible'); return;
   }
   const safeQuantity = isWeight ? Math.min(quantity, selectedSaleItem.stock) : Math.round(Math.min(quantity, selectedSaleItem.stock));
+  const unitCost = Number(selectedSaleItem.cost_price || 0);
   const res = await authFetch('/stores/me/sales', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({product_id: selectedSaleItem.product_id, quantity: Number(safeQuantity.toFixed(4)), unit})
   });
   if(!res.ok){ const err = await res.json(); alert(err.detail || 'No se pudo registrar la venta'); return; }
   const sale = await res.json();
-  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada (${formatQuantity(safeQuantity)} ${unit} · $${Math.round(sale.total).toLocaleString('es-CO')}). Stock actualizado.`;
+  const saleTotal = Math.round(sale.total);
+  const saleProfit = Math.round(saleTotal - (unitCost * safeQuantity));
+  document.getElementById('sale-message').textContent = `Venta #${sale.id} registrada (${formatQuantity(safeQuantity)} ${unit} · Venta: $${saleTotal.toLocaleString('es-CO')} · Ganancia neta: ${saleProfit >= 0 ? '+' : '-'}$${Math.abs(saleProfit).toLocaleString('es-CO')}). Stock actualizado.`;
   const qtyInput = document.getElementById('sale-quantity');
   qtyInput.min = '1';
   qtyInput.step = '1';
@@ -1022,6 +1104,8 @@ async function registerSale(){
   document.getElementById('sale-amount').value = '';
   document.getElementById('sale-amount-field').style.display = 'none';
   document.getElementById('sale-calc-preview').textContent = '';
+  const profitBox = document.getElementById('sale-profit-preview');
+  if(profitBox) profitBox.style.display = 'none';
   document.getElementById('sale-product-search').value = '';
   document.getElementById('sale-selected').style.display = 'none';
   selectedSaleItem = null;
@@ -1048,6 +1132,73 @@ async function deleteInventoryItem(productId){
   }
 }
 
+function updateModalProfitPreview(){
+  const unit = document.getElementById('modal-unit').value || 'unidad';
+  const unitLabel = unit === 'lb' ? 'libra (lb)' : (unit === 'kg' ? 'kilogramo (kg)' : 'unidad');
+  const stockLabel = document.getElementById('modal-stock-label');
+  const costLabel = document.getElementById('modal-cost-label');
+  const priceLabel = document.getElementById('modal-price-label');
+  if(stockLabel) stockLabel.textContent = `Stock disponible (${unit})`;
+  if(costLabel) costLabel.textContent = `¿Cuánto cuesta a la tienda por ${unit}? ($)`;
+  if(priceLabel) priceLabel.textContent = `¿En cuánto se va a vender por ${unit}? ($)`;
+
+  const rawCost = document.getElementById('modal-cost-price').value;
+  const rawPrice = document.getElementById('modal-price').value;
+  const rawStock = document.getElementById('modal-stock').value;
+  const box = document.getElementById('modal-profit-preview');
+  if(!box) return;
+
+  if(rawCost === '' && rawPrice === ''){
+    box.className = 'profit-preview-box';
+    box.innerHTML = `<div style="color:var(--muted);font-size:12px;">Ingresa cuánto le cuesta el producto a la tienda y en cuánto se va a vender por ${unitLabel} para calcular la ganancia neta automáticamente.</div>`;
+    return;
+  }
+
+  const cost = parseFloat(rawCost) || 0;
+  const price = parseFloat(rawPrice) || 0;
+  const stock = parseFloat(rawStock) || 0;
+  const unitProfit = price - cost;
+  const marginPct = cost > 0 ? Math.round((unitProfit / cost) * 100) : null;
+  const totalCost = Math.round(cost * stock);
+  const totalRevenue = Math.round(price * stock);
+  const totalProfit = Math.round(unitProfit * stock);
+
+  box.className = `profit-preview-box ${unitProfit >= 0 ? 'positive' : 'negative'}`;
+  box.innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px;color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};">
+      ${unitProfit >= 0 ? '✓ Cálculo de Ganancia Neta' : '⚠️ Atención: Precio de venta menor al costo'}
+    </div>
+    <div class="profit-preview-row">
+      <span>Costo tienda por ${unit}:</span>
+      <strong>$${Math.round(cost).toLocaleString('es-CO')}</strong>
+    </div>
+    <div class="profit-preview-row">
+      <span>Precio de venta por ${unit}:</span>
+      <strong>$${Math.round(price).toLocaleString('es-CO')}</strong>
+    </div>
+    <div class="profit-preview-row" style="border-top:1px solid var(--line);padding-top:5px;margin-top:5px;color:${unitProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;">
+      <span>Ganancia neta por ${unit}:</span>
+      <strong>${unitProfit >= 0 ? '+' : '-'}$${Math.abs(Math.round(unitProfit)).toLocaleString('es-CO')}${marginPct !== null ? ` (${marginPct >= 0 ? '+' : ''}${marginPct}%)` : ''}</strong>
+    </div>
+    ${stock > 0 ? `
+      <div style="border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:12px;">
+        <div class="profit-preview-row" style="color:var(--muted);">
+          <span>Costo total del stock (${formatQuantity(stock)} ${unit}):</span>
+          <strong>$${totalCost.toLocaleString('es-CO')}</strong>
+        </div>
+        <div class="profit-preview-row" style="color:var(--muted);">
+          <span>Venta total del stock (${formatQuantity(stock)} ${unit}):</span>
+          <strong>$${totalRevenue.toLocaleString('es-CO')}</strong>
+        </div>
+        <div class="profit-preview-row" style="color:${totalProfit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:700;font-size:13px;">
+          <span>Ganancia neta total del stock:</span>
+          <strong>${totalProfit >= 0 ? '+' : '-'}$${Math.abs(totalProfit).toLocaleString('es-CO')}</strong>
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
 function openInventoryModal(){
   document.getElementById('inventory-modal').style.display = 'flex';
   document.querySelector('#inventory-modal h3').textContent = 'Agregar producto al inventario';
@@ -1064,6 +1215,7 @@ function openInventoryModal(){
   document.getElementById('product-suggestions').innerHTML = '';
   selectedProductId = null; selectedProductName = null;
   renderSuppliersDatalist();
+  updateModalProfitPreview();
 }
 
 function openEditInventoryModal(item){
@@ -1084,6 +1236,7 @@ function openEditInventoryModal(item){
     document.getElementById('image-preview').src = item.product.image_url;
     document.getElementById('image-preview').style.display = 'block';
   }
+  updateModalProfitPreview();
 }
 function closeInventoryModal(){ document.getElementById('inventory-modal').style.display = 'none'; }
 
@@ -1128,13 +1281,18 @@ function readProductImage(){
 }
 
 async function saveInventoryItem(){
-  const price = parseFloat(document.getElementById('modal-price').value);
-  const cost_price = parseFloat(document.getElementById('modal-cost-price').value) || 0;
+  const rawCost = document.getElementById('modal-cost-price').value;
+  const rawPrice = document.getElementById('modal-price').value;
+  const price = parseFloat(rawPrice);
+  const cost_price = rawCost === '' ? NaN : parseFloat(rawCost);
   const supplier = document.getElementById('modal-supplier').value.trim() || null;
   const stock = parseFloat(document.getElementById('modal-stock').value);
   const unit = document.getElementById('modal-unit').value;
   const name = document.getElementById('modal-product-search').value.trim();
-  if(!name || isNaN(price) || price < 0 || cost_price < 0 || isNaN(stock) || stock < 0){ alert('Completa nombre, precios y stock con valores válidos'); return; }
+  if(!name || isNaN(cost_price) || cost_price < 0 || isNaN(price) || price < 0 || isNaN(stock) || stock < 0){
+    alert('Completa el nombre del producto, cuánto cuesta a la tienda ($), en cuánto se va a vender ($) y el stock disponible.');
+    return;
+  }
   const imageUrl = await readProductImage();
 
   let productId = selectedProductId;
@@ -1173,9 +1331,12 @@ async function loadOrders(){
       if(invRes.ok) inventoryItems = enrichInventoryWithMeta(await invRes.json());
     }catch(_e){}
   }
+  const meta = getLocalInventoryMeta();
   const prodNameMap = {};
+  const prodCostMap = {};
   inventoryItems.forEach(item => {
     if(item.product) prodNameMap[item.product_id] = item.product.name;
+    prodCostMap[item.product_id] = Number(item.cost_price || (meta[item.product_id] && meta[item.product_id].cost_price) || 0);
   });
 
   let acceptedMap = {};
@@ -1198,10 +1359,15 @@ async function loadOrders(){
     );
     const courierName = o.courier_name || (localAcc && localAcc.courier_name) || 'Domiciliario confirmado';
     const courierPhone = o.courier_phone || (localAcc && localAcc.courier_phone) || '';
+    let orderCost = 0;
     const itemsText = (o.items || []).map(it => {
       const pName = prodNameMap[it.product_id] || `Producto #${it.product_id}`;
+      const localMetaCost = meta[it.product_id] ? Number(meta[it.product_id].cost_price || 0) : 0;
+      const unitCost = Number(it.cost_price || prodCostMap[it.product_id] || localMetaCost || 0);
+      orderCost += unitCost * (Number(it.quantity) || 0);
       return `<strong>${formatQuantity(it.quantity)} ${it.unit || 'unidad'}</strong> de ${pName}`;
     }).join('<br>') || '—';
+    const orderProfit = Math.round((Number(o.total) || 0) - orderCost);
 
     let deliveryHtml = '<strong>Recoge en tienda</strong><br><span style="color:var(--green);font-size:12px;">✓ Preparar para entrega en mostrador</span>';
     if(o.delivery_address){
@@ -1222,7 +1388,10 @@ async function loadOrders(){
       <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
       <td style="font-size:13px;line-height:1.45;">${itemsText}</td>
       <td>${deliveryHtml}</td>
-      <td class="mono">$${o.total.toLocaleString('es-CO')}</td>
+      <td class="mono">
+        $${o.total.toLocaleString('es-CO')}
+        <div style="font-size:11px;color:${orderProfit >= 0 ? 'var(--green)' : 'var(--red)'};margin-top:3px;">Ganancia: ${orderProfit >= 0 ? '+' : '-'}$${Math.abs(orderProfit).toLocaleString('es-CO')}</div>
+      </td>
       <td><span class="status-pill status-${o.status}">${o.status.replace('_',' ')}</span></td>
       <td>
         ${o.status === 'entregado'
