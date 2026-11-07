@@ -107,6 +107,10 @@
     <p style="color:var(--muted);font-size:13px;margin:6px 0 20px;">Supervisa tiendas, clientes y aprueba domiciliarios con su Cédula de Ciudadanía.</p>
     <div class="field"><label>Correo de administrador</label><input type="email" id="admin-email" value="admin@inventario.com" placeholder="admin@inventario.com"></div>
     <div class="field"><label>Contraseña</label><input type="password" id="admin-password" placeholder="••••••••"></div>
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;padding:10px 12px;background:#EEF6F0;border:1px solid var(--green);border-radius:6px;font-size:12px;line-height:1.45;color:var(--ink);cursor:pointer;">
+      <input type="checkbox" id="admin-privacy-check" style="width:16px;height:16px;margin-top:2px;accent-color:var(--green);flex:0 0 auto;">
+      <span>Acepto obligatoriamente la <a href="#" onclick="openAdminPrivacyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
+    </label>
     <button class="primary" onclick="loginAdmin()">Entrar al panel</button>
     <button class="secondary-login" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
     <p class="error-msg" id="login-error"></p>
@@ -115,6 +119,19 @@
       Correo: <span class="mono">admin@inventario.com</span><br>
       Contraseña: <span class="mono">admin1234</span>
     </div>
+  </div>
+</div>
+
+<!-- Modal Obligatorio de Política de Privacidad -->
+<div id="admin-privacy-modal" style="display:none;position:fixed;inset:0;background:rgba(27,42,65,.8);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div style="width:min(600px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:var(--paper);border-radius:12px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.35);">
+    <span style="display:inline-block;background:#FDF0DD;color:#9A6318;font:700 11px 'IBM Plex Mono',monospace;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:8px;">Requisito Legal Obligatorio · Colombia</span>
+    <h3 style="margin:0 0 12px;font-size:18px;color:var(--navy);">Política de Privacidad y Tratamiento de Datos Personales — Venta Fast</h3>
+    <div style="background:var(--cream);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:13px;line-height:1.6;color:var(--ink);text-align:justify;margin-bottom:14px;">
+      <p style="margin:0 0 10px;">La presente <strong>Política de Privacidad y Tratamiento de Datos Personales</strong> regula la recolección, almacenamiento, uso, circulación, verificación y supresión de la información registrada por los usuarios de la aplicación multiplataforma <strong>Venta Fast</strong> (tanto en sus versiones para computador personal PC/Web como en dispositivos móviles Android e iOS). Este instrumento jurídico y técnico se estructura en estricto cumplimiento de la <strong>Constitución Política de Colombia (Artículo 15 — Derecho al Habeas Data y a la intimidad)</strong>, la <strong>Ley Estatutaria 1581 de 2012</strong>, el <strong>Decreto Reglamentario 1377 de 2013</strong> (compilado en el <strong>Decreto Único 1074 de 2015</strong>), la <strong>Ley 1266 de 2008</strong> y los estándares internacionales de seguridad de la información <strong>ISO/IEC 27001</strong> e <strong>ISO/IEC 27701</strong>.</p>
+      <p style="margin:0;">Al registrarse o utilizar cualquiera de los cuatro perfiles de <strong>Venta Fast</strong> (<strong>Administrador General, Tienda, Cliente o Domiciliario</strong>), el titular otorga su autorización previa, expresa, libre e informada para que sus datos sean tratados conforme a las finalidades estrictamente operativas, comerciales y de seguridad descritas en esta sección.</p>
+    </div>
+    <button type="button" class="primary" onclick="confirmAdminPrivacyModal()">Acepto la Política de Privacidad y Continuar</button>
   </div>
 </div>
 
@@ -223,6 +240,30 @@ let allStores = [];
 let allCustomers = [];
 let allCouriers = [];
 
+const PRIVACY_STORAGE_KEY = 'ventafast_privacy_accepted_v1';
+function openAdminPrivacyModal(){
+  document.getElementById('admin-privacy-modal').style.display = 'flex';
+}
+function confirmAdminPrivacyModal(){
+  try{
+    localStorage.setItem(PRIVACY_STORAGE_KEY, 'true');
+    localStorage.setItem('ventafast_privacy_accepted_at', new Date().toISOString());
+  }catch(_e){}
+  const chk = document.getElementById('admin-privacy-check');
+  if(chk) chk.checked = true;
+  document.getElementById('admin-privacy-modal').style.display = 'none';
+}
+try{
+  if(localStorage.getItem(PRIVACY_STORAGE_KEY) === 'true'){
+    setTimeout(() => {
+      const chk = document.getElementById('admin-privacy-check');
+      if(chk) chk.checked = true;
+    }, 0);
+  } else {
+    setTimeout(() => openAdminPrivacyModal(), 50);
+  }
+}catch(_e){}
+
 function getLocalCouriersRegistry(){
   try{ return JSON.parse(localStorage.getItem(LOCAL_COURIERS_KEY) || '{}'); }catch(_e){ return {}; }
 }
@@ -233,8 +274,17 @@ function saveLocalCouriersRegistry(reg){
 async function loginAdmin(){
   const email = document.getElementById('admin-email').value.trim().toLowerCase();
   const password = document.getElementById('admin-password').value;
+  const privacyCheck = document.getElementById('admin-privacy-check');
   const errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
+
+  if(!privacyCheck || !privacyCheck.checked){
+    errEl.textContent = 'Debes aceptar obligatoriamente la Política de Privacidad y Tratamiento de Datos Personales para usar Venta Fast.';
+    errEl.style.display = 'block';
+    openAdminPrivacyModal();
+    return;
+  }
+  try{ localStorage.setItem(PRIVACY_STORAGE_KEY, 'true'); }catch(_e){}
 
   try{
     const res = await fetch(`${API_URL}/auth/admin/login`, {

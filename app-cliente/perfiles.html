@@ -3,16 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vent Inventario · Perfil</title>
+<title>Venta Fast · Inventario y Perfiles</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{--navy:#1B2A41;--cream:#F7F5F0;--paper:#fff;--amber:#E0A458;--green:#3F6C51;--ink:#1B2A41;--muted:#6B7280;--line:#E4E0D6}
-  *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif}h1,h2{font-family:'Sora',sans-serif;margin:0}.shell{width:min(560px,100%);margin:auto;padding:28px 18px}.hero{background:var(--navy);color:#fff;padding:28px 22px;border-radius:0 0 22px 22px}.eyebrow{color:var(--amber);font:600 11px monospace;letter-spacing:.1em;text-transform:uppercase}.hero h1{font-size:27px;margin-top:10px}.hero p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.5}.section-title{font-size:18px;margin:26px 0 12px}.profile-card{display:block;width:100%;text-align:left;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px rgba(27,42,65,.06)}.profile-card:hover{border-color:var(--amber)}.profile-card strong{display:block;font:600 16px 'Sora',sans-serif}.profile-card span{display:block;color:var(--muted);font-size:13px;margin-top:6px}.profile-card .tag{display:inline-block;color:var(--green);font-size:11px;font-weight:700;margin-top:12px}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:22px}
+  :root{--navy:#1B2A41;--cream:#F7F5F0;--paper:#fff;--amber:#E0A458;--amber-dark:#C4863C;--green:#3F6C51;--red:#B14A42;--ink:#1B2A41;--muted:#6B7280;--line:#E4E0D6}
+  *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif}h1,h2,h3{font-family:'Sora',sans-serif;margin:0}.shell{width:min(560px,100%);margin:auto;padding:28px 18px}.hero{background:var(--navy);color:#fff;padding:28px 22px;border-radius:0 0 22px 22px}.eyebrow{color:var(--amber);font:600 11px monospace;letter-spacing:.1em;text-transform:uppercase}.hero h1{font-size:27px;margin-top:10px}.hero p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.5}.section-title{font-size:18px;margin:26px 0 12px}.profile-card{display:block;width:100%;text-align:left;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px rgba(27,42,65,.06)}.profile-card:hover{border-color:var(--amber)}.profile-card strong{display:block;font:600 16px 'Sora',sans-serif}.profile-card span{display:block;color:var(--muted);font-size:13px;margin-top:6px}.profile-card .tag{display:inline-block;color:var(--green);font-size:11px;font-weight:700;margin-top:12px}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:22px}
+  .policy-link-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--navy);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+  .policy-link-btn:hover{border-color:var(--amber)}
+  .privacy-overlay{position:fixed;inset:0;background:rgba(27,42,65,.82);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999;backdrop-filter:blur(3px)}
+  .privacy-modal{width:min(620px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:var(--paper);border-radius:14px;padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.4);border:1px solid var(--line)}
+  .privacy-badge{display:inline-block;background:#FDF0DD;color:#9A6318;font:700 11px monospace;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-bottom:10px}
+  .privacy-modal h2{font-size:20px;color:var(--navy);line-height:1.3}
+  .privacy-body{margin:16px 0;padding:16px;background:var(--cream);border:1px solid var(--line);border-radius:10px;font-size:13.5px;line-height:1.65;color:var(--ink);text-align:justify}
+  .privacy-body p{margin:0 0 12px}
+  .privacy-body p:last-child{margin-bottom:0}
+  .privacy-check{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#EEF6F0;border:1.5px solid var(--green);border-radius:10px;font-size:13px;line-height:1.45;color:var(--ink);cursor:pointer;margin-bottom:14px}
+  .privacy-check input{width:18px;height:18px;margin-top:2px;accent-color:var(--green);flex:0 0 auto;cursor:pointer}
+  .privacy-error{color:var(--red);font-size:12.5px;font-weight:600;margin:0 0 10px;display:none}
+  .privacy-accept-btn{width:100%;padding:13px 16px;border:none;border-radius:8px;background:var(--navy);color:#fff;font:700 14px 'Inter',sans-serif;cursor:pointer}
+  .privacy-accept-btn:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
-<header class="hero"><div class="shell"><span class="eyebrow">Vent Inventario</span><h1>¿Cómo quieres entrar?</h1><p>Elige el perfil que usarás en esta aplicación.</p></div></header>
+<header class="hero"><div class="shell"><span class="eyebrow">Venta Fast</span><h1>¿Cómo quieres entrar?</h1><p>Elige el perfil que usarás en esta aplicación.</p></div></header>
 <main class="shell">
   <h2 class="section-title">Perfiles móviles</h2>
   <button class="profile-card" onclick="go('index.html')">
@@ -39,11 +53,92 @@
   </button>
 
   <p class="note" id="store-note">Los paneles de tienda y administrador están adaptados tanto para computador como para móvil.</p>
+  <button type="button" class="policy-link-btn" onclick="openPrivacyModal(true)">🔒 Política de Privacidad y Tratamiento de Datos Personales (Aceptación obligatoria)</button>
 </main>
+
+<!-- Modal Obligatorio de Política de Privacidad y Tratamiento de Datos -->
+<div class="privacy-overlay" id="privacy-overlay" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+  <div class="privacy-modal">
+    <span class="privacy-badge">Requisito Legal Obligatorio · Colombia</span>
+    <h2 id="privacy-title">Política de Privacidad y Tratamiento de Datos Personales — Venta Fast</h2>
+    <div class="privacy-body">
+      <p>La presente <strong>Política de Privacidad y Tratamiento de Datos Personales</strong> regula la recolección, almacenamiento, uso, circulación, verificación y supresión de la información registrada por los usuarios de la aplicación multiplataforma <strong>Venta Fast</strong> (tanto en sus versiones para computador personal PC/Web como en dispositivos móviles Android e iOS). Este instrumento jurídico y técnico se estructura en estricto cumplimiento de la <strong>Constitución Política de Colombia (Artículo 15 — Derecho al Habeas Data y a la intimidad)</strong>, la <strong>Ley Estatutaria 1581 de 2012</strong>, el <strong>Decreto Reglamentario 1377 de 2013</strong> (compilado en el <strong>Decreto Único 1074 de 2015</strong>), la <strong>Ley 1266 de 2008</strong> y los estándares internacionales de seguridad de la información <strong>ISO/IEC 27001</strong> e <strong>ISO/IEC 27701</strong>.</p>
+      <p>Al registrarse o utilizar cualquiera de los cuatro perfiles de <strong>Venta Fast</strong> (<strong>Administrador General, Tienda, Cliente o Domiciliario</strong>), el titular otorga su autorización previa, expresa, libre e informada para que sus datos sean tratados conforme a las finalidades estrictamente operativas, comerciales y de seguridad descritas en esta sección.</p>
+    </div>
+    <label class="privacy-check">
+      <input type="checkbox" id="privacy-accept-checkbox" onchange="onPrivacyCheckChange()">
+      <span>He leído y <strong>acepto obligatoriamente</strong> la Política de Privacidad y Tratamiento de Datos Personales de <strong>Venta Fast</strong>, autorizando de manera previa, expresa, libre e informada el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.</span>
+    </label>
+    <p class="privacy-error" id="privacy-error">Debes marcar la casilla de aceptación para poder utilizar la aplicación Venta Fast.</p>
+    <button type="button" class="privacy-accept-btn" id="privacy-accept-btn" onclick="acceptPrivacyPolicy()" disabled>Aceptar Política y Continuar a la App</button>
+  </div>
+</div>
+
 <script>
+const PRIVACY_STORAGE_KEY = 'ventafast_privacy_accepted_v1';
+let pendingNavigationPath = null;
+
 // Despertar el servidor de Render en segundo plano apenas se abre la pantalla inicial
 fetch('https://vent-fast-yxui.onrender.com/').catch(() => {});
-function go(path){ window.location.href = path; }
+
+function hasAcceptedPrivacy(){
+  try{ return localStorage.getItem(PRIVACY_STORAGE_KEY) === 'true'; }catch(_e){ return false; }
+}
+
+function openPrivacyModal(forceShow){
+  const overlay = document.getElementById('privacy-overlay');
+  const checkbox = document.getElementById('privacy-accept-checkbox');
+  const btn = document.getElementById('privacy-accept-btn');
+  const err = document.getElementById('privacy-error');
+  const already = hasAcceptedPrivacy();
+  if(!forceShow && already) return;
+  checkbox.checked = already;
+  btn.disabled = !checkbox.checked;
+  err.style.display = 'none';
+  overlay.style.display = 'flex';
+}
+
+function onPrivacyCheckChange(){
+  const checkbox = document.getElementById('privacy-accept-checkbox');
+  const btn = document.getElementById('privacy-accept-btn');
+  const err = document.getElementById('privacy-error');
+  btn.disabled = !checkbox.checked;
+  if(checkbox.checked) err.style.display = 'none';
+}
+
+function acceptPrivacyPolicy(){
+  const checkbox = document.getElementById('privacy-accept-checkbox');
+  const err = document.getElementById('privacy-error');
+  if(!checkbox.checked){
+    err.style.display = 'block';
+    return;
+  }
+  try{
+    localStorage.setItem(PRIVACY_STORAGE_KEY, 'true');
+    localStorage.setItem('ventafast_privacy_accepted_at', new Date().toISOString());
+  }catch(_e){}
+  document.getElementById('privacy-overlay').style.display = 'none';
+  if(pendingNavigationPath){
+    const target = pendingNavigationPath;
+    pendingNavigationPath = null;
+    window.location.href = target;
+  }
+}
+
+function go(path){
+  if(!hasAcceptedPrivacy()){
+    pendingNavigationPath = path;
+    openPrivacyModal(true);
+    return;
+  }
+  window.location.href = path;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if(!hasAcceptedPrivacy()){
+    openPrivacyModal(true);
+  }
+});
 </script>
 </body>
 </html>
