@@ -384,15 +384,26 @@
         <button class="btn" onclick="openInventoryModal()">+ Agregar producto</button>
       </div>
       <div class="summary-grid" aria-label="Resumen del inventario">
-        <div class="summary-card"><div class="label">Productos activos</div><div class="value" id="summary-products">0</div></div>
+        <div class="summary-card" id="card-all-products" onclick="setLowStockFilter(false, true)" style="cursor:pointer;transition:all .18s;" title="Ver todos los productos">
+          <div class="label">Productos activos</div>
+          <div class="value" id="summary-products">0</div>
+          <div style="font-size:11px;color:var(--navy-light);margin-top:4px;font-weight:600;">Ver todos →</div>
+        </div>
         <div class="summary-card"><div class="label">Costo actual en stock</div><div class="value" id="summary-inventory-cost">$0</div></div>
         <div class="summary-card" style="border-color:var(--green);"><div class="label" style="color:var(--green);">Ganancia neta en stock</div><div class="value" id="summary-inventory-profit" style="color:var(--green);">$0</div></div>
-        <div class="summary-card warning"><div class="label">Stock bajo</div><div class="value" id="summary-low-stock">0</div></div>
+        <div class="summary-card warning" id="card-low-stock" onclick="toggleLowStockFilter()" style="cursor:pointer;transition:all .18s;" title="Toca para ir a los productos con stock bajo">
+          <div class="label" style="display:flex;justify-content:space-between;align-items:center;"><span>Stock bajo</span><span style="font-size:13px;">⚠️</span></div>
+          <div class="value" id="summary-low-stock">0</div>
+          <div id="low-stock-hint" style="font-size:11px;color:#D97706;margin-top:4px;font-weight:600;">Toca para ver cuáles →</div>
+        </div>
         <div class="summary-card"><div class="label">Total vendido</div><div class="value" id="summary-sales-total">$0</div><div style="font-size:11px;color:var(--muted);margin-top:4px;"><span id="summary-sales-count">0</span> ventas entregadas · <span id="summary-units">0</span> u. disp.</div></div>
-        <div class="summary-card" style="border-color:var(--green);background:#F2F8F4;"><div class="label" style="color:var(--green);">Ganancia neta de ventas</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
+        <div class="summary-card" style="border-color:var(--green);background:#EFF6FF;"><div class="label" style="color:var(--green);">Ganancia neta de ventas</div><div class="value" id="summary-profit-total" style="color:var(--green);">$0</div></div>
       </div>
-      <div class="inventory-toolbar">
-        <strong>Tu catálogo</strong>
+      <div class="inventory-toolbar" id="inventory-catalog-anchor">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <strong id="inventory-catalog-title">Tu catálogo</strong>
+          <button type="button" id="clear-low-stock-btn" onclick="setLowStockFilter(false, false)" style="display:none;background:#FEF3C7;color:#B45309;border:1px solid #F59E0B;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">⚠️ Mostrando solo stock bajo (≤ 5) · ✕ Ver todos</button>
+        </div>
         <input type="search" id="inventory-search" placeholder="Buscar en inventario..." oninput="renderInventory(this.value)">
       </div>
       <table>
@@ -1222,16 +1233,58 @@ function updateInventorySummary(){
   }
 }
 
+let filterOnlyLowStock = false;
+
+function toggleLowStockFilter(){
+  setLowStockFilter(!filterOnlyLowStock, true);
+}
+
+function setLowStockFilter(active, scrollToCatalog = true){
+  filterOnlyLowStock = Boolean(active);
+  const lowCard = document.getElementById('card-low-stock');
+  const lowHint = document.getElementById('low-stock-hint');
+  const clearBtn = document.getElementById('clear-low-stock-btn');
+  const catTitle = document.getElementById('inventory-catalog-title');
+  if(lowCard){
+    lowCard.style.borderColor = filterOnlyLowStock ? '#D97706' : 'var(--line)';
+    lowCard.style.background = filterOnlyLowStock ? '#FFFBEB' : 'var(--paper)';
+    lowCard.style.boxShadow = filterOnlyLowStock ? '0 0 0 3px rgba(217,119,6,.18)' : '0 3px 10px rgba(15,23,42,.03)';
+  }
+  if(lowHint){
+    lowHint.textContent = filterOnlyLowStock ? 'Mostrando stock bajo · Toca para ver todos' : 'Toca para ver cuáles →';
+  }
+  if(clearBtn){
+    clearBtn.style.display = filterOnlyLowStock ? 'inline-flex' : 'none';
+  }
+  if(catTitle){
+    catTitle.textContent = filterOnlyLowStock ? 'Productos con stock bajo (≤ 5)' : 'Tu catálogo';
+  }
+  renderInventory(document.getElementById('inventory-search') ? document.getElementById('inventory-search').value : '');
+  if(scrollToCatalog){
+    const anchor = document.getElementById('inventory-catalog-anchor');
+    if(anchor){
+      anchor.scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+  }
+}
+
 function renderInventory(search = ''){
   const normalizedSearch = search.trim().toLowerCase();
-  const items = inventoryItems.filter(item =>
-    !normalizedSearch
-    || item.product.name.toLowerCase().includes(normalizedSearch)
-    || (item.supplier && item.supplier.toLowerCase().includes(normalizedSearch))
-  );
+  const items = inventoryItems.filter(item => {
+    if(filterOnlyLowStock && Number(item.stock || 0) > 5) return false;
+    return (
+      !normalizedSearch
+      || item.product.name.toLowerCase().includes(normalizedSearch)
+      || (item.supplier && item.supplier.toLowerCase().includes(normalizedSearch))
+    );
+  });
   const tbody = document.getElementById('inventory-tbody');
   if(items.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="eyebrow">${normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío'}</span><p>${normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto indicando cuánto cuesta a la tienda y en cuánto lo vas a vender.'}</p></div></td></tr>`;
+    const emptyEyebrow = filterOnlyLowStock ? 'Sin productos en stock bajo' : (normalizedSearch ? 'Sin coincidencias' : 'Inventario vacío');
+    const emptyText = filterOnlyLowStock
+      ? '¡Excelente! Ningún producto tiene stock menor o igual a 5 unidades en este momento.'
+      : (normalizedSearch ? 'Prueba con otro nombre.' : 'Agrega tu primer producto indicando cuánto cuesta a la tienda y en cuánto lo vas a vender.');
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><span class="eyebrow">${emptyEyebrow}</span><p>${emptyText}</p>${filterOnlyLowStock ? '<button type="button" class="btn small secondary" onclick="setLowStockFilter(false, false)">Ver todos los productos</button>' : ''}</div></td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(item => {
@@ -1243,8 +1296,9 @@ function renderInventory(search = ''){
     const stockProfit = Math.round(unitProfit * stock);
     const marginPct = cost > 0 ? Math.round((unitProfit / cost) * 100) : null;
     const marginBadge = marginPct !== null ? `<span style="display:block;font-size:11px;font-weight:500;opacity:.85;">(${marginPct >= 0 ? '+' : ''}${marginPct}%)</span>` : '';
+    const isLowRow = filterOnlyLowStock && stock <= 5;
     return `
-    <tr>
+    <tr style="${isLowRow ? 'border-color:#F59E0B;background:#FFFDF7;' : ''}">
       <td data-label="Producto"><span style="display:inline-flex;align-items:center;gap:8px;font-weight:600;">${item.product.image_url ? `<img src="${item.product.image_url}" alt="${item.product.name}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex:0 0 auto;">` : ''}${item.product.name}</span></td>
       <td data-label="Categoría">${item.product.category || '—'}</td>
       <td data-label="Proveedor">${item.supplier || '<span style="color:var(--muted);">Sin proveedor</span>'}</td>
