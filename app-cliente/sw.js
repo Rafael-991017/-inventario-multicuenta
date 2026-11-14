@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ventafast-pwa-v1';
+const CACHE_NAME = 'ventafast-pwa-v2';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

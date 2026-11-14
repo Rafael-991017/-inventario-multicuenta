@@ -18,7 +18,7 @@ app = FastAPI(
         "pedidos a domicilio, y consulta de disponibilidad de productos "
         "entre tiendas."
     ),
-    version="1.1.2",
+    version="1.1.3",
 )
 
 

@@ -18,6 +18,7 @@ buildscript {
 apply from: "variables.gradle"
 
 allprojects {
+    buildDir = new File(System.getProperty("java.io.tmpdir"), "ventafast_gradle_build/${project.name}")
     repositories {
         google()
         mavenCentral()
