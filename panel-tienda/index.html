@@ -288,6 +288,19 @@
   </div>
 </div>
 
+<!-- Modal Confirmar Cerrar Sesión al presionar Regresar -->
+<div class="modal-overlay" id="store-exit-confirm-modal" style="z-index:9997;">
+  <div class="modal" style="width:min(380px,100%);border-radius:18px;padding:24px;text-align:center;">
+    <div style="font-size:34px;margin-bottom:8px;">🚪</div>
+    <h3 style="margin:0 0 8px;font-size:18px;color:var(--ink);">¿Quieres cerrar sesión?</h3>
+    <p style="margin:0 0 18px;font-size:13px;color:var(--muted);line-height:1.45;">Si sales ahora se cerrará la sesión de tu tienda y regresarás al menú de perfiles.</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn secondary" onclick="cancelExitStoreToProfiles()" style="flex:1;">No, quedarme</button>
+      <button type="button" class="btn" onclick="confirmExitStoreToProfiles()" style="flex:1;background:var(--red);box-shadow:none;">Sí, cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ APP ============ -->
 <div id="order-toast-container"></div>
 <div id="app">
@@ -614,12 +627,12 @@ let selectedProductId = null;
 let selectedProductName = null;
 let inventoryItems = [];
 
-function goHomeProfiles(){
+function goHomeProfiles(query = '?switch=1'){
   const p = window.location.pathname.replace(/\\/g, '/');
   if(p.includes('/panel-tienda/')){
-    window.location.href = '../app-cliente/perfiles.html';
+    window.location.href = `../app-cliente/perfiles.html${query}`;
   } else {
-    window.location.href = 'perfiles.html';
+    window.location.href = `perfiles.html${query}`;
   }
 }
 
@@ -990,6 +1003,7 @@ function startStoreOrderWatcher(){
 }
 
 function enterApp(initialView){
+  try{ sessionStorage.setItem('vf_active_profile_page', 'tienda.html'); }catch(_e){}
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('sidebar-store-name').textContent = STORE.name;
@@ -1162,6 +1176,7 @@ function logout(){
 }
 
 let currentStoreView = 'inventory';
+let storeHistoryArmedByGesture = false;
 
 function pushStoreHistoryGuard(view){
   try{
@@ -1169,10 +1184,41 @@ function pushStoreHistoryGuard(view){
   }catch(_e){}
 }
 
+function armStoreHistoryOnGesture(){
+  if(storeHistoryArmedByGesture) return;
+  storeHistoryArmedByGesture = true;
+  pushStoreHistoryGuard(currentStoreView);
+  pushStoreHistoryGuard(currentStoreView);
+}
+window.addEventListener('pointerdown', armStoreHistoryOnGesture, {passive: true});
+window.addEventListener('keydown', armStoreHistoryOnGesture, {passive: true});
+
+function openExitStoreConfirmModal(){
+  const m = document.getElementById('store-exit-confirm-modal');
+  if(m) m.style.display = 'flex';
+}
+function cancelExitStoreToProfiles(){
+  const m = document.getElementById('store-exit-confirm-modal');
+  if(m) m.style.display = 'none';
+  pushStoreHistoryGuard(currentStoreView);
+  pushStoreHistoryGuard(currentStoreView);
+}
+function confirmExitStoreToProfiles(){
+  const m = document.getElementById('store-exit-confirm-modal');
+  if(m) m.style.display = 'none';
+  logout();
+  goHomeProfiles('?logout=1');
+}
+
 window.addEventListener('popstate', () => {
+  const exitModal = document.getElementById('store-exit-confirm-modal');
   const invModal = document.getElementById('inventory-modal');
   const resetModal = document.getElementById('store-reset-modal');
   const privModal = document.getElementById('store-privacy-modal');
+  if(exitModal && exitModal.style.display === 'flex'){
+    cancelExitStoreToProfiles();
+    return;
+  }
   if(invModal && invModal.style.display === 'flex'){
     closeInventoryModal();
     pushStoreHistoryGuard(currentStoreView);
@@ -1200,12 +1246,13 @@ window.addEventListener('popstate', () => {
       return;
     }
     pushStoreHistoryGuard('inventory');
+    openExitStoreConfirmModal();
   } else {
     pushStoreHistoryGuard('login');
   }
 });
 
-// Inicializar guardia de historial al cargar para evitar que el botón Atrás del celular devuelva a perfiles
+// Inicializar guardia de historial al cargar para evitar que el botón Atrás del celular devuelva a perfiles sin preguntar
 try{
   history.replaceState({ vfStoreGuard: true, view: 'inventory' }, '', window.location.href);
   pushStoreHistoryGuard('inventory');

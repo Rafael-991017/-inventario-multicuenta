@@ -74,15 +74,92 @@
   </div>
 </div>
 
+<!-- Modal de confirmación cuando el usuario regresa desde el botón Atrás del celular teniendo sesión activa -->
+<div class="privacy-overlay" id="back-logout-overlay" role="dialog" aria-modal="true" style="z-index:10000;">
+  <div class="privacy-modal" style="width:min(390px,100%);text-align:center;padding:24px;">
+    <div style="font-size:36px;margin-bottom:8px;">🚪</div>
+    <h2 style="font-size:19px;margin-bottom:8px;">¿Quieres cerrar sesión?</h2>
+    <p id="back-logout-text" style="font-size:13.5px;color:var(--muted);line-height:1.5;margin:0 0 18px;">Tienes una sesión activa. ¿Deseas cerrarla y regresar al menú de perfiles?</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" onclick="stayInActiveSession()" style="flex:1;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--navy);font:700 13px 'Inter',sans-serif;cursor:pointer;">No, volver</button>
+      <button type="button" onclick="confirmLogoutFromProfiles()" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--red);color:#fff;font:700 13px 'Inter',sans-serif;cursor:pointer;">Sí, cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const PRIVACY_STORAGE_KEY = 'ventafast_privacy_accepted_v1';
 let pendingNavigationPath = null;
+let detectedActiveReturnUrl = null;
+let detectedActiveType = null;
 
 // Despertar el servidor de Render en segundo plano apenas se abre la pantalla inicial
 fetch('https://vent-fast-yxui.onrender.com/').catch(() => {});
 
 function hasAcceptedPrivacy(){
   try{ return localStorage.getItem(PRIVACY_STORAGE_KEY) === 'true'; }catch(_e){ return false; }
+}
+
+function checkAccidentalBackNavigation(){
+  try{
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('switch') === '1' || params.get('logout') === '1'){
+      sessionStorage.removeItem('vf_active_profile_page');
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    const navEntries = performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
+    const isBackForward = (navEntries[0] && navEntries[0].type === 'back_forward') || Boolean(sessionStorage.getItem('vf_active_profile_page'));
+    if(!isBackForward) return;
+
+    const lastPage = sessionStorage.getItem('vf_active_profile_page') || '';
+    const storeToken = localStorage.getItem('store_token');
+    const storeData = JSON.parse(localStorage.getItem('store_data') || 'null');
+    const customerToken = localStorage.getItem('customer_token');
+    const customerProfile = JSON.parse(localStorage.getItem('customer_profile') || 'null');
+
+    if((lastPage.includes('tienda') || (!lastPage && storeToken)) && storeToken && storeData){
+      detectedActiveType = 'store';
+      detectedActiveReturnUrl = 'tienda.html';
+      document.getElementById('back-logout-text').textContent = `Tienes la sesión iniciada en la tienda "${storeData.name}". ¿Quieres cerrar sesión y salir a los perfiles?`;
+      document.getElementById('back-logout-overlay').style.display = 'flex';
+      return;
+    }
+    if((lastPage.includes('index') || (!lastPage && customerToken)) && customerToken && customerProfile){
+      detectedActiveType = 'customer';
+      detectedActiveReturnUrl = 'index.html';
+      document.getElementById('back-logout-text').textContent = `Tienes la sesión iniciada como "${customerProfile.name}". ¿Quieres cerrar sesión y salir a los perfiles?`;
+      document.getElementById('back-logout-overlay').style.display = 'flex';
+      return;
+    }
+  }catch(_e){}
+}
+
+function stayInActiveSession(){
+  document.getElementById('back-logout-overlay').style.display = 'none';
+  if(detectedActiveReturnUrl){
+    window.location.href = detectedActiveReturnUrl;
+  }
+}
+
+function confirmLogoutFromProfiles(){
+  try{
+    sessionStorage.removeItem('vf_active_profile_page');
+    if(detectedActiveType === 'store'){
+      localStorage.removeItem('store_token');
+      localStorage.removeItem('store_data');
+      localStorage.removeItem('store_active_view');
+    } else if(detectedActiveType === 'customer'){
+      localStorage.removeItem('customer_token');
+      localStorage.removeItem('customer_profile');
+    } else {
+      localStorage.removeItem('store_token');
+      localStorage.removeItem('store_data');
+      localStorage.removeItem('customer_token');
+      localStorage.removeItem('customer_profile');
+    }
+  }catch(_e){}
+  document.getElementById('back-logout-overlay').style.display = 'none';
 }
 
 function openPrivacyModal(forceShow){
@@ -121,6 +198,7 @@ function acceptPrivacyPolicy(){
   if(pendingNavigationPath){
     const target = pendingNavigationPath;
     pendingNavigationPath = null;
+    try{ sessionStorage.setItem('vf_active_profile_page', target); }catch(_e){}
     window.location.href = target;
   }
 }
@@ -131,12 +209,20 @@ function go(path){
     openPrivacyModal(true);
     return;
   }
+  try{ sessionStorage.setItem('vf_active_profile_page', path); }catch(_e){}
   window.location.href = path;
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   if(!hasAcceptedPrivacy()){
     openPrivacyModal(true);
+  }
+  checkAccidentalBackNavigation();
+});
+
+window.addEventListener('pageshow', (event) => {
+  if(event.persisted){
+    checkAccidentalBackNavigation();
   }
 });
 </script>

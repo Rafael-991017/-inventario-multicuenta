@@ -205,7 +205,7 @@
       <div style="text-align:center;margin-top:10px;">
         <button type="button" onclick="openCustomerResetModal()" style="border:0;background:none;color:var(--green);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
       </div>
-      <button class="secondary" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
+      <button class="secondary" type="button" onclick="window.location.href='perfiles.html?switch=1'">← Volver al inicio</button>
       <p class="error" id="auth-error"></p>
       <div class="toggle"><span id="toggle-label">¿Aún no tienes cuenta?</span> <button type="button" onclick="toggleCustomerAuth()" id="toggle-button">Regístrate</button></div>
     </div>
@@ -241,6 +241,19 @@
   </div>
 </div>
 
+<!-- Modal Confirmar Cerrar Sesión Cliente al presionar Regresar -->
+<div class="modal-overlay" id="customer-exit-confirm-modal" style="z-index:9997;align-items:center;padding:16px;">
+  <div class="modal" style="width:min(380px,100%);border-radius:18px;padding:24px;text-align:center;">
+    <div style="font-size:34px;margin-bottom:8px;">🚪</div>
+    <h3 style="margin:0 0 8px;font-size:18px;color:var(--ink);">¿Quieres cerrar sesión?</h3>
+    <p style="margin:0 0 18px;font-size:13px;color:var(--muted);line-height:1.45;">Si sales ahora se cerrará tu sesión de cliente y regresarás al menú de perfiles.</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" onclick="cancelExitCustomerToProfiles()" style="flex:1;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);color:var(--navy);font-weight:700;cursor:pointer;font-family:inherit;">No, quedarme</button>
+      <button type="button" onclick="confirmExitCustomerToProfiles()" style="flex:1;padding:12px;border:none;border-radius:12px;background:var(--red);color:#fff;font-weight:700;cursor:pointer;font-family:inherit;">Sí, cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
 <div id="client-app">
 <header>
   <div class="header-top">
@@ -257,7 +270,7 @@
         🛒
         <span class="icon-badge" id="header-cart-badge">0</span>
       </button>
-      <button class="icon-btn-top" type="button" onclick="window.location.href='perfiles.html'" title="Cambiar perfil" aria-label="Cambiar perfil">👤</button>
+      <button class="icon-btn-top" type="button" onclick="window.location.href='perfiles.html?switch=1'" title="Cambiar perfil" aria-label="Cambiar perfil">👤</button>
       <button class="icon-btn-top" type="button" onclick="logoutCustomer()" title="Cerrar sesión" aria-label="Cerrar sesión">🚪</button>
     </div>
   </div>
@@ -309,7 +322,7 @@
         <span class="shortcut-circle">🔎</span>
         <span class="shortcut-text">Buscar todo</span>
       </button>
-      <button type="button" class="shortcut-item" onclick="window.location.href='perfiles.html'">
+      <button type="button" class="shortcut-item" onclick="window.location.href='perfiles.html?switch=1'">
         <span class="shortcut-circle">🔄</span>
         <span class="shortcut-text">Perfiles</span>
       </button>
@@ -754,6 +767,7 @@ async function submitCustomerAuth(){
 
 function enterCustomerApp(){
   if(!customerProfile) return;
+  try{ sessionStorage.setItem('vf_active_profile_page', 'index.html'); }catch(_e){}
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('client-app').style.display = 'block';
   document.getElementById('customer-badge').textContent = `${customerProfile.name} · ${customerProfile.email}`;
@@ -1646,13 +1660,42 @@ function resetCart(){
   updateCartBar();
 }
 
+let clientHistoryArmedByGesture = false;
+
 function pushClientHistoryGuard(screen = 'home'){
   try{
     history.pushState({ vfClientGuard: true, screen }, '', window.location.href);
   }catch(_e){}
 }
 
+function armClientHistoryOnGesture(){
+  if(clientHistoryArmedByGesture) return;
+  clientHistoryArmedByGesture = true;
+  pushClientHistoryGuard('home');
+  pushClientHistoryGuard('home');
+}
+window.addEventListener('pointerdown', armClientHistoryOnGesture, {passive: true});
+window.addEventListener('keydown', armClientHistoryOnGesture, {passive: true});
+
+function openExitCustomerConfirmModal(){
+  const m = document.getElementById('customer-exit-confirm-modal');
+  if(m) m.style.display = 'flex';
+}
+function cancelExitCustomerToProfiles(){
+  const m = document.getElementById('customer-exit-confirm-modal');
+  if(m) m.style.display = 'none';
+  pushClientHistoryGuard('home');
+  pushClientHistoryGuard('home');
+}
+function confirmExitCustomerToProfiles(){
+  const m = document.getElementById('customer-exit-confirm-modal');
+  if(m) m.style.display = 'none';
+  logoutCustomer();
+  window.location.href = 'perfiles.html?logout=1';
+}
+
 window.addEventListener('popstate', () => {
+  const exitModal = document.getElementById('customer-exit-confirm-modal');
   const checkoutModal = document.getElementById('checkout-modal');
   const cartModal = document.getElementById('cart-modal');
   const trackingModal = document.getElementById('tracking-modal');
@@ -1661,6 +1704,10 @@ window.addEventListener('popstate', () => {
   const resetModal = document.getElementById('customer-reset-modal');
   const privModal = document.getElementById('privacy-policy-modal');
 
+  if(exitModal && exitModal.style.display === 'flex'){
+    cancelExitCustomerToProfiles();
+    return;
+  }
   if(checkoutModal && checkoutModal.style.display === 'flex'){
     closeCheckout();
     pushClientHistoryGuard('home');
@@ -1710,6 +1757,9 @@ window.addEventListener('popstate', () => {
     return;
   }
   pushClientHistoryGuard('home');
+  if(customerToken && customerProfile){
+    openExitCustomerConfirmModal();
+  }
 });
 
 try{
