@@ -131,16 +131,55 @@ def login_courier(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(g
     return {"access_token": token, "courier": courier}
 
 
+def ensure_default_admin() -> dict:
+    existing_admins = list(list_collection("admins"))
+    if existing_admins:
+        return existing_admins[0]
+    admin_id = next_id("admins")
+    admin_doc = {
+        "id": admin_id,
+        "name": "Administrador General",
+        "email": auth.ADMIN_EMAIL.strip().lower(),
+        "password": auth.ADMIN_PASSWORD,
+        "hashed_password": auth.hash_password(auth.ADMIN_PASSWORD),
+        "role": "admin",
+    }
+    collection("admins").document(str(admin_id)).set(admin_doc)
+    return admin_doc
+
+
 @router.post("/admin/login", response_model=schemas.AdminToken)
 def login_admin(form_data: OAuth2PasswordRequestForm = Depends()):
+    ensure_default_admin()
     email_input = form_data.username.strip().lower()
-    if email_input != auth.ADMIN_EMAIL.lower() or form_data.password != auth.ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Credenciales de administrador incorrectas")
-    token = auth.create_access_token({"sub": auth.ADMIN_EMAIL.lower(), "role": "admin"})
-    return {
-        "access_token": token,
-        "admin": {"email": auth.ADMIN_EMAIL.lower(), "name": "Administrador General"},
-    }
+    password_input = form_data.password
+
+    matched_admin = _find_user_case_insensitive("admins", email_input)
+    if matched_admin:
+        plain_stored = matched_admin.get("password")
+        hashed_stored = matched_admin.get("hashed_password")
+        password_ok = False
+        if plain_stored is not None and password_input == str(plain_stored):
+            password_ok = True
+        elif hashed_stored and auth.verify_password(password_input, hashed_stored):
+            password_ok = True
+        if password_ok:
+            admin_email = str(matched_admin.get("email") or email_input).strip().lower()
+            admin_name = matched_admin.get("name") or "Administrador General"
+            token = auth.create_access_token({"sub": admin_email, "role": "admin"})
+            return {
+                "access_token": token,
+                "admin": {"email": admin_email, "name": admin_name},
+            }
+
+    if email_input == auth.ADMIN_EMAIL.lower() and password_input == auth.ADMIN_PASSWORD:
+        token = auth.create_access_token({"sub": auth.ADMIN_EMAIL.lower(), "role": "admin"})
+        return {
+            "access_token": token,
+            "admin": {"email": auth.ADMIN_EMAIL.lower(), "name": "Administrador General"},
+        }
+
+    raise HTTPException(status_code=401, detail="Credenciales de administrador incorrectas")
 
 
 @router.post("/customer/register", response_model=schemas.CustomerOut, status_code=201)

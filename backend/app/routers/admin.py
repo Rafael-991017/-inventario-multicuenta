@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from .. import auth, schemas
 from ..database import collection, list_collection, get_db
+from .auth import ensure_default_admin
 
 router = APIRouter(prefix="/admin", tags=["Administración"])
 
@@ -50,6 +51,10 @@ def get_admin_overview(
     current_admin: dict = Depends(auth.get_current_admin),
     db=Depends(get_db),
 ):
+    try:
+        ensure_default_admin()
+    except Exception:
+        pass
     stores = [_normalize_store(s) for s in list_collection("stores")]
     customers = [
         {

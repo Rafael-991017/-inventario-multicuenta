@@ -18,8 +18,16 @@ app = FastAPI(
         "pedidos a domicilio, y consulta de disponibilidad de productos "
         "entre tiendas."
     ),
-    version="1.0.8",
+    version="1.0.9",
 )
+
+
+@app.on_event("startup")
+def seed_default_admin():
+    try:
+        auth_router.ensure_default_admin()
+    except Exception:
+        pass
 
 # Permite que cualquier navegador (PC, celular, GitHub Pages, Render, Android) se conecte a la API.
 app.add_middleware(
