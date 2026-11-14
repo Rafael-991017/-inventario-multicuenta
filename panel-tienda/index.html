@@ -179,6 +179,17 @@
   }
   .empty-state{text-align:center;padding:44px 16px;color:var(--muted);}
   .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
+  .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--red);color:#fff;font:700 11px 'IBM Plex Mono',monospace;vertical-align:middle;}
+  #order-toast-container{position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 24px));pointer-events:none;}
+  .order-toast{pointer-events:auto;background:var(--navy);color:#fff;border:2px solid var(--amber);border-radius:12px;padding:14px 16px;box-shadow:0 14px 36px rgba(0,0,0,.35);animation:toastSlideIn .28s ease-out;}
+  @keyframes toastSlideIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+  .order-toast-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+  .order-toast-title{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--amber);}
+  .order-toast-body{font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.92);margin-bottom:10px;}
+  .order-toast-actions{display:flex;gap:8px;}
+  .order-toast-actions button{flex:1;padding:8px 10px;border-radius:6px;border:0;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .order-toast-actions .view-btn{background:var(--amber);color:var(--navy);}
+  .order-toast-actions .dismiss-btn{background:rgba(255,255,255,.14);color:#fff;}
 </style>
 </head>
 <body>
@@ -253,6 +264,7 @@
 </div>
 
 <!-- ============ APP ============ -->
+<div id="order-toast-container"></div>
 <div id="app">
   <div class="sidebar">
     <div class="brand">
@@ -260,7 +272,7 @@
       <div class="store-name" id="sidebar-store-name">—</div>
     </div>
     <div class="nav-item active" data-view="inventory" onclick="switchView('inventory')">Inventario</div>
-    <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos</div>
+    <div class="nav-item" data-view="orders" onclick="switchView('orders')">Pedidos<span id="nav-orders-badge" class="nav-badge" style="display:none;">0</span></div>
     <div class="nav-item" data-view="sales" onclick="switchView('sales')">Vender</div>
     <div class="nav-item" data-view="profits" onclick="switchView('profits')">Ganancias</div>
     <div class="nav-item" data-view="suppliers" onclick="switchView('suppliers')">Proveedores</div>
@@ -680,6 +692,178 @@ function saveLocalInventoryMeta(productId, cost_price, supplier){
   }catch(_e){}
 }
 
+let storeOrderWatcherTimer = null;
+let knownOrderIds = null;
+
+function getSeenOrdersStorageKey(){
+  return `inventario_seen_orders_${STORE ? STORE.id : 'default'}`;
+}
+
+function requestStoreNotificationPermission(){
+  try{
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission().catch(() => {});
+    }
+  }catch(_e){}
+}
+
+function playNewOrderSound(){
+  try{
+    if(navigator.vibrate){
+      navigator.vibrate([260, 120, 260]);
+    }
+  }catch(_e){}
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [587.33, 783.99, 1046.50]; // D5, G5, C6 chime
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.14);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + idx * 0.14 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.14 + 0.32);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.14);
+      osc.stop(ctx.currentTime + idx * 0.14 + 0.34);
+    });
+  }catch(_e){}
+}
+
+function showNewOrderNotification(order){
+  playNewOrderSound();
+  const locParts = [
+    order.customer_neighborhood ? `Barrio ${order.customer_neighborhood}` : null,
+    order.customer_municipality || null,
+    order.customer_department || null
+  ].filter(Boolean);
+  const locText = locParts.length ? locParts.join(' · ') : (order.delivery_address || 'Recoge en tienda');
+  const modeText = order.delivery_address ? `🛵 Domicilio: ${order.delivery_address}` : '🏪 Recoge en tienda';
+  const totalFormatted = `$${Number(order.total || 0).toLocaleString('es-CO')}`;
+
+  // Notificación nativa del navegador / celular si está permitida
+  try{
+    if('Notification' in window && Notification.permission === 'granted'){
+      const n = new Notification(`🔔 ¡Nuevo pedido #${order.id} en ${STORE ? STORE.name : 'tu tienda'}!`, {
+        body: `Cliente: ${order.customer_name} · ${totalFormatted}\n📍 ${locText}\n${modeText}`,
+        tag: `order-${order.id}`
+      });
+      n.onclick = () => {
+        window.focus();
+        switchView('orders');
+        n.close();
+      };
+    }
+  }catch(_e){}
+
+  // Notificación visual flotante dentro de la app
+  const container = document.getElementById('order-toast-container');
+  if(!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'order-toast';
+  toast.innerHTML = `
+    <div class="order-toast-header">
+      <span class="order-toast-title">🔔 ¡Nuevo pedido #${order.id} recibido!</span>
+      <span class="mono" style="font-size:13px;font-weight:700;color:#fff;">${totalFormatted}</span>
+    </div>
+    <div class="order-toast-body">
+      <strong>Cliente:</strong> ${order.customer_name} (${order.customer_phone || 'sin tel.'})<br>
+      <strong>Ubicación:</strong> 📍 ${locText}<br>
+      <span>${modeText}</span>
+    </div>
+    <div class="order-toast-actions">
+      <button type="button" class="view-btn">Ver pedido ahora</button>
+      <button type="button" class="dismiss-btn">Cerrar</button>
+    </div>
+  `;
+  toast.querySelector('.view-btn').onclick = () => {
+    toast.remove();
+    switchView('orders');
+  };
+  toast.querySelector('.dismiss-btn').onclick = () => {
+    toast.remove();
+  };
+  container.prepend(toast);
+  setTimeout(() => {
+    if(toast.parentNode) toast.remove();
+  }, 25000);
+}
+
+function updatePendingOrdersBadge(orders){
+  const badge = document.getElementById('nav-orders-badge');
+  if(!badge) return;
+  const pendingCount = (orders || []).filter(o =>
+    o.status === 'pendiente' && !(o.customer_name === 'Venta en tienda')
+  ).length;
+  if(pendingCount > 0){
+    badge.textContent = pendingCount;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function checkNewOrdersInBackground(){
+  if(!TOKEN || !STORE) return;
+  try{
+    const res = await authFetch('/orders/me');
+    if(!res.ok) return;
+    const orders = await res.json();
+    if(!Array.isArray(orders)) return;
+
+    updatePendingOrdersBadge(orders);
+
+    const customerOrders = orders.filter(o => !(o.customer_name === 'Venta en tienda' && o.status === 'entregado'));
+    const storageKey = getSeenOrdersStorageKey();
+
+    if(knownOrderIds === null){
+      let savedIds = null;
+      try{
+        const raw = localStorage.getItem(storageKey);
+        if(raw) savedIds = JSON.parse(raw);
+      }catch(_e){}
+      if(Array.isArray(savedIds)){
+        knownOrderIds = new Set(savedIds);
+        const freshOnOpen = customerOrders.filter(o => !knownOrderIds.has(o.id) && o.status === 'pendiente');
+        freshOnOpen.forEach(o => {
+          knownOrderIds.add(o.id);
+          showNewOrderNotification(o);
+        });
+        customerOrders.forEach(o => knownOrderIds.add(o.id));
+      } else {
+        knownOrderIds = new Set(customerOrders.map(o => o.id));
+      }
+      try{ localStorage.setItem(storageKey, JSON.stringify(Array.from(knownOrderIds))); }catch(_e){}
+      return;
+    }
+
+    const newOrders = customerOrders.filter(o => !knownOrderIds.has(o.id));
+    if(newOrders.length > 0){
+      newOrders.forEach(o => {
+        knownOrderIds.add(o.id);
+        showNewOrderNotification(o);
+      });
+      try{ localStorage.setItem(storageKey, JSON.stringify(Array.from(knownOrderIds))); }catch(_e){}
+      if(document.getElementById('view-orders').style.display !== 'none'){
+        loadOrders();
+      }
+      loadStoreSummary();
+    }
+  }catch(_e){}
+}
+
+function startStoreOrderWatcher(){
+  clearInterval(storeOrderWatcherTimer);
+  knownOrderIds = null;
+  requestStoreNotificationPermission();
+  checkNewOrdersInBackground();
+  storeOrderWatcherTimer = setInterval(checkNewOrdersInBackground, 5000);
+}
+
 function enterApp(initialView){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -688,6 +872,7 @@ function enterApp(initialView){
   loadInventory();
   loadStoreSummary();
   ensureStoreCoordinates();
+  startStoreOrderWatcher();
   const savedView = initialView || localStorage.getItem('store_active_view') || 'inventory';
   switchView(savedView);
 }
@@ -834,6 +1019,11 @@ async function computeStoreSummary(period = 'all'){
 }
 
 function logout(){
+  clearInterval(storeOrderWatcherTimer);
+  clearInterval(ordersRefreshTimer);
+  knownOrderIds = null;
+  const toastContainer = document.getElementById('order-toast-container');
+  if(toastContainer) toastContainer.innerHTML = '';
   TOKEN = null; STORE = null;
   try{
     localStorage.removeItem('store_token');
@@ -1517,6 +1707,7 @@ async function loadOrders(){
 
   const res = await authFetch('/orders/me');
   const orders = await res.json();
+  updatePendingOrdersBadge(orders);
   const tbody = document.getElementById('orders-tbody');
   if(orders.length === 0){
     tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><span class="eyebrow">Sin pedidos</span><p>Aquí aparecerán los pedidos de tus clientes.</p></div></td></tr>`;
