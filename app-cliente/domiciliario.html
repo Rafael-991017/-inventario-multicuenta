@@ -12,6 +12,10 @@
   .auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px;background:var(--navy)}.auth-card{width:min(420px,100%);background:var(--paper);padding:30px;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.28)}.eyebrow{display:block;color:#B87822;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}.auth-card h1{font-size:24px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.field{margin:16px 0}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;background:var(--cream);font:14px 'Inter',sans-serif}.primary,.secondary{width:100%;padding:12px;border:0;border-radius:7px;font-weight:700;cursor:pointer}.primary{background:var(--amber);color:var(--navy)}.secondary{margin-top:10px;background:transparent;color:var(--navy);border:1px solid var(--line)}.error{color:var(--red);font-size:13px;margin-top:12px;line-height:1.4}.notice{color:var(--green);background:#E4EEE8;padding:12px;border-radius:8px;font-size:13px;margin-top:12px;line-height:1.4;display:none}.toggle{text-align:center;color:var(--muted);font-size:13px;margin-top:18px}.toggle button{border:0;background:none;color:var(--green);font-weight:700;cursor:pointer}
   #dashboard{display:none;min-height:100vh}.topbar{background:var(--navy);color:#fff;padding:22px 18px 26px;border-radius:0 0 22px 22px}.topbar-inner{max-width:720px;margin:auto;display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.topbar h1{font-size:22px}.topbar .eyebrow{color:var(--amber)}.logout{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:8px 12px;cursor:pointer}.content{width:min(720px,100%);margin:auto;padding:18px}.status-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;justify-content:space-between;align-items:center;gap:18px}.status-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.status-text{font:700 22px 'Sora',sans-serif;margin-top:6px}.status-dot{width:12px;height:12px;background:var(--red);border-radius:50%;display:inline-block;margin-right:8px}.status-dot.active{background:var(--green)}.switch{position:relative;width:54px;height:30px;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#CDD2D8;border-radius:30px;cursor:pointer;transition:.2s}.slider:before{content:'';position:absolute;width:22px;height:22px;left:4px;top:4px;background:#fff;border-radius:50%;transition:.2s}.switch input:checked + .slider{background:var(--green)}.switch input:checked + .slider:before{transform:translateX(24px)}.info-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:14px}.info-card h2{font-size:17px;margin-bottom:14px}.info-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}.info-row:last-child{border-bottom:0}.info-row span{color:var(--muted)}
   .delivery-card{border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px;background:var(--paper)}.delivery-card h3{font-size:15px}.delivery-card p{color:var(--muted);font-size:13px;line-height:1.5}.delivery-actions{display:flex;gap:8px}.delivery-actions button{flex:1;padding:9px;border:0;border-radius:6px;background:var(--amber);color:var(--navy);font-weight:700;cursor:pointer}.delivery-actions .secondary-action{background:var(--cream);border:1px solid var(--line)}
+  .pw-wrap{position:relative;display:flex;align-items:center}
+  .pw-wrap input{padding-right:92px!important;width:100%}
+  .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:1px solid var(--line);background:var(--paper);color:var(--navy);font:600 11.5px 'Inter',sans-serif;padding:5px 9px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;user-select:none}
+  .pw-toggle:hover{background:#EEF2F7}
 </style>
 </head>
 <body>
@@ -22,7 +26,7 @@
     <p class="muted" id="auth-subtitle">Activa tu disponibilidad y prepárate para recibir entregas.</p>
     <div id="auth-form">
       <div class="field"><label>Correo</label><input id="auth-email" type="email" placeholder="domiciliario@correo.com"></div>
-      <div class="field"><label>Contraseña</label><input id="auth-password" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>Contraseña</label><div class="pw-wrap"><input id="auth-password" type="password" placeholder="••••••••"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('auth-password', this)">👁 Ver</button></div></div>
       <div id="register-fields" style="display:none">
         <div class="field"><label>Nombre completo</label><input id="auth-name" type="text" placeholder="Ej: Andrés Gómez"></div>
         <div class="field"><label>Cédula de Ciudadanía (Colombia) *</label><input id="auth-cedula" type="text" inputmode="numeric" maxlength="11" placeholder="Ej: 1000123456"></div>
@@ -52,7 +56,7 @@
     <p style="margin:0 0 14px;font-size:13px;color:var(--muted);">Ingresa tu correo y tu Cédula de Ciudadanía (o teléfono) registrada para verificar tu identidad y crear una nueva contraseña.</p>
     <div class="field"><label>Correo registrado</label><input id="reset-cour-email" type="email" placeholder="domiciliario@correo.com"></div>
     <div class="field"><label>Cédula de Ciudadanía o Teléfono registrado</label><input id="reset-cour-verif" type="text" placeholder="Ej: 1000123456"></div>
-    <div class="field"><label>Nueva contraseña</label><input id="reset-cour-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <div class="field"><label>Nueva contraseña</label><div class="pw-wrap"><input id="reset-cour-pass" type="password" placeholder="Mínimo 4 caracteres"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('reset-cour-pass', this)">👁 Ver</button></div></div>
     <p id="reset-cour-msg" style="font-size:13px;min-height:18px;margin:8px 0;"></p>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button type="button" class="secondary" onclick="closeCourierResetModal()" style="margin-top:0;flex:1;">Cancelar</button>
@@ -129,6 +133,14 @@ try{
     setTimeout(() => openPrivacyPolicyModal(), 50);
   }
 }catch(_e){}
+
+function togglePasswordVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈 Ocultar' : '👁 Ver';
+}
 
 function toggleAuth(){
   isRegister = !isRegister;

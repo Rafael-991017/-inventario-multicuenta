@@ -174,6 +174,10 @@
   .auth-card .error{color:var(--red);font-size:13px;margin-top:12px;min-height:18px;}
   .auth-card .toggle{text-align:center;color:var(--muted);font-size:13px;margin-top:18px;}
   .auth-card .toggle button{border:0;background:none;color:var(--navy-light);font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;}
+  .pw-wrap{position:relative;display:flex;align-items:center;}
+  .pw-wrap input{padding-right:92px!important;width:100%;}
+  .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:1px solid var(--line);background:var(--paper);color:var(--navy);font:600 11.5px 'Inter',sans-serif;padding:5px 9px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;user-select:none;}
+  .pw-toggle:hover{background:#EEF2F7;}
   #client-app{display:none;}
 </style>
 </head>
@@ -186,7 +190,7 @@
     <p class="muted" id="auth-subtitle">Ingresa con tu correo para buscar productos, hacer pedidos y guardar tu historial en tu propia cuenta.</p>
     <div id="auth-form">
       <div class="field"><label>Correo</label><input id="auth-email" type="email" placeholder="cliente@correo.com"></div>
-      <div class="field"><label>Contraseña</label><input id="auth-password" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>Contraseña</label><div class="pw-wrap"><input id="auth-password" type="password" placeholder="••••••••"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('auth-password', this)">👁 Ver</button></div></div>
       <div id="register-fields" style="display:none">
         <div class="field"><label>Nombre completo</label><input id="auth-name" type="text" placeholder="Tu nombre completo"></div>
         <div class="field"><label>Teléfono</label><input id="auth-phone" type="tel" placeholder="300 000 0000"></div>
@@ -219,7 +223,7 @@
     <p style="margin:0 0 14px;font-size:13px;color:var(--muted);">Ingresa tu correo y el teléfono registrado en tu cuenta para verificar tu identidad y crear una nueva contraseña.</p>
     <div class="field"><label>Correo registrado</label><input id="reset-cust-email" type="email" placeholder="cliente@correo.com"></div>
     <div class="field"><label>Teléfono registrado (verificación)</label><input id="reset-cust-phone" type="tel" placeholder="300 000 0000"></div>
-    <div class="field"><label>Nueva contraseña</label><input id="reset-cust-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <div class="field"><label>Nueva contraseña</label><div class="pw-wrap"><input id="reset-cust-pass" type="password" placeholder="Mínimo 4 caracteres"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('reset-cust-pass', this)">👁 Ver</button></div></div>
     <p id="reset-cust-msg" style="font-size:13px;min-height:18px;margin:8px 0;"></p>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button type="button" class="secondary" onclick="closeCustomerResetModal()" style="margin-top:0;flex:1;padding:11px;border:1px solid var(--line);border-radius:7px;background:transparent;cursor:pointer;font-weight:600;">Cancelar</button>
@@ -507,6 +511,14 @@ function toggleCustomerAuth(){
   document.getElementById('toggle-label').textContent = isCustomerRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?';
   document.getElementById('toggle-button').textContent = isCustomerRegister ? 'Inicia sesión' : 'Regístrate';
   document.getElementById('auth-error').textContent = '';
+}
+
+function togglePasswordVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈 Ocultar' : '👁 Ver';
 }
 
 function openCustomerResetModal(){

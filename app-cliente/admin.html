@@ -23,10 +23,13 @@
   .field{margin-bottom:14px}
   .field label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px}
   .field input{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;font-size:14px;background:var(--cream);color:var(--ink);font-family:inherit}
+  .pw-wrap{position:relative;display:flex;align-items:center}
+  .pw-wrap input{padding-right:92px!important;width:100%}
+  .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:1px solid var(--line);background:var(--paper);color:var(--navy);font:600 11.5px 'Inter',sans-serif;padding:5px 9px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;user-select:none}
+  .pw-toggle:hover{background:#EEF2F7}
   .primary{width:100%;padding:12px;background:var(--amber);color:var(--navy);border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px}
   .secondary-login{width:100%;padding:11px;background:transparent;color:var(--navy);border:1.5px solid var(--line);border-radius:6px;font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
   .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none}
-  .hint-box{margin-top:14px;padding:10px 12px;background:var(--cream);border:1px solid var(--line);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.5}
 
   #admin-app{display:none;min-height:100vh}
   .sidebar{width:240px;background:var(--navy);color:#fff;position:fixed;top:0;left:0;bottom:0;padding:28px 0;display:flex;flex-direction:column}
@@ -114,8 +117,8 @@
     <span class="eyebrow">Administración General · Colombia</span>
     <h1>Acceso Admin</h1>
     <p style="color:var(--muted);font-size:13px;margin:6px 0 20px;">Supervisa tiendas, clientes y aprueba domiciliarios con su Cédula de Ciudadanía.</p>
-    <div class="field"><label>Correo de administrador</label><input type="email" id="admin-email" value="admin@inventario.com" placeholder="admin@inventario.com"></div>
-    <div class="field"><label>Contraseña</label><input type="password" id="admin-password" placeholder="••••••••"></div>
+    <div class="field"><label>Correo de administrador</label><input type="email" id="admin-email" autocomplete="off" placeholder="Ingresa el correo de administrador"></div>
+    <div class="field"><label>Contraseña</label><div class="pw-wrap"><input type="password" id="admin-password" autocomplete="off" placeholder="••••••••"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('admin-password', this)">👁 Ver</button></div></div>
     <label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;padding:10px 12px;background:#EEF6F0;border:1px solid var(--green);border-radius:6px;font-size:12px;line-height:1.45;color:var(--ink);cursor:pointer;">
       <input type="checkbox" id="admin-privacy-check" style="width:16px;height:16px;margin-top:2px;accent-color:var(--green);flex:0 0 auto;">
       <span>Acepto conscientemente la <a href="#" onclick="openAdminPrivacyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
@@ -123,11 +126,6 @@
     <button class="primary" onclick="loginAdmin()">Entrar al panel</button>
     <button class="secondary-login" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
     <p class="error-msg" id="login-error"></p>
-    <div class="hint-box">
-      <strong>Cuenta de administrador por defecto:</strong><br>
-      Correo: <span class="mono">admin@inventario.com</span><br>
-      Contraseña: <span class="mono">admin1234</span>
-    </div>
   </div>
 </div>
 
@@ -288,6 +286,14 @@ function getLocalStoresRegistry(){
 }
 function saveLocalStoresRegistry(reg){
   try{ localStorage.setItem(LOCAL_STORES_KEY, JSON.stringify(reg)); }catch(_e){}
+}
+
+function togglePasswordVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈 Ocultar' : '👁 Ver';
 }
 
 async function loginAdmin(){

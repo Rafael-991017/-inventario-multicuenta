@@ -215,6 +215,10 @@
   .order-toast-actions button{flex:1;padding:8px 10px;border-radius:999px;border:0;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
   .order-toast-actions .view-btn{background:#fff;color:var(--navy);}
   .order-toast-actions .dismiss-btn{background:rgba(255,255,255,.16);color:#fff;}
+  .pw-wrap{position:relative;display:flex;align-items:center;}
+  .pw-wrap input{padding-right:92px!important;width:100%;}
+  .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:1px solid var(--line);background:var(--paper);color:var(--navy);font:600 11.5px 'Inter',sans-serif;padding:5px 9px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;user-select:none;}
+  .pw-toggle:hover{background:#EEF2F7;}
 </style>
 </head>
 <body>
@@ -228,7 +232,7 @@
 
     <div id="login-form">
       <div class="field"><label>Correo o nombre de la tienda</label><input type="text" id="login-email" autocapitalize="none" autocorrect="off" placeholder="Ej: tienda@correo.com o la mona"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <div class="field"><label>Contraseña</label><div class="pw-wrap"><input type="password" id="login-password" placeholder="••••••••"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('login-password', this)">👁 Ver</button></div></div>
       <button class="primary" onclick="login()">Entrar</button>
       <div style="text-align:center;margin-top:10px;">
         <button type="button" onclick="openStoreResetModal()" style="border:0;background:none;color:var(--green);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
@@ -238,7 +242,7 @@
     <div id="register-form" style="display:none;">
       <div class="field"><label>Nombre de la tienda</label><input type="text" id="reg-name"></div>
       <div class="field"><label>Correo</label><input type="email" id="reg-email"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
+      <div class="field"><label>Contraseña</label><div class="pw-wrap"><input type="password" id="reg-password"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('reg-password', this)">👁 Ver</button></div></div>
       <div class="field"><label>Dirección exacta</label><input type="text" id="reg-address" placeholder="Calle 10 # 20-30"></div>
       <div class="field"><label>Barrio</label><input type="text" id="reg-neighborhood" placeholder="Nombre del barrio"></div>
       <div class="field"><label>Municipio</label><input type="text" id="reg-municipality" placeholder="Ciudad o municipio"></div>
@@ -279,7 +283,7 @@
     <p style="margin:0 0 14px;font-size:13px;color:var(--muted);">Ingresa el correo o nombre de tu tienda y el teléfono de contacto registrado para verificar tu identidad y crear una nueva contraseña.</p>
     <div class="field"><label>Correo o nombre de la tienda</label><input id="reset-store-email" type="text" autocapitalize="none" autocorrect="off" placeholder="Ej: tienda@correo.com o la mona"></div>
     <div class="field"><label>Teléfono de contacto registrado</label><input id="reset-store-phone" type="tel" placeholder="300 000 0000"></div>
-    <div class="field"><label>Nueva contraseña</label><input id="reset-store-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <div class="field"><label>Nueva contraseña</label><div class="pw-wrap"><input id="reset-store-pass" type="password" placeholder="Mínimo 4 caracteres"><button type="button" class="pw-toggle" onclick="togglePasswordVisibility('reset-store-pass', this)">👁 Ver</button></div></div>
     <p id="reset-store-msg" style="font-size:13px;min-height:18px;margin:8px 0;"></p>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button type="button" class="btn secondary" onclick="closeStoreResetModal()" style="flex:1;">Cancelar</button>
@@ -1034,6 +1038,14 @@ function startStoreOrderWatcher(){
   requestStoreNotificationPermission();
   checkNewOrdersInBackground();
   storeOrderWatcherTimer = setInterval(checkNewOrdersInBackground, 5000);
+}
+
+function togglePasswordVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈 Ocultar' : '👁 Ver';
 }
 
 function enterApp(initialView){
