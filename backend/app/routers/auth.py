@@ -118,6 +118,9 @@ def register_customer(customer_in: schemas.CustomerCreate, db=Depends(get_db)):
         "email": normalized_email,
         "hashed_password": auth.hash_password(customer_in.password),
         "phone": customer_in.phone.strip(),
+        "department": customer_in.department.strip() if customer_in.department else None,
+        "municipality": customer_in.municipality.strip() if customer_in.municipality else None,
+        "neighborhood": customer_in.neighborhood.strip() if customer_in.neighborhood else None,
         "address": customer_in.address.strip() if customer_in.address else None,
     }
     collection("customers").document(str(customer["id"])).set(customer)

@@ -110,6 +110,9 @@ class CustomerCreate(BaseModel):
     email: EmailStr
     password: str
     phone: str
+    department: Optional[str] = None
+    municipality: Optional[str] = None
+    neighborhood: Optional[str] = None
     address: Optional[str] = None
 
 
@@ -118,6 +121,9 @@ class CustomerOut(BaseModel):
     name: str
     email: EmailStr
     phone: str
+    department: Optional[str] = None
+    municipality: Optional[str] = None
+    neighborhood: Optional[str] = None
     address: Optional[str] = None
 
 
@@ -231,6 +237,9 @@ class OrderCreate(BaseModel):
     customer_email: Optional[EmailStr] = None
     customer_name: str
     customer_phone: str
+    customer_department: Optional[str] = None
+    customer_municipality: Optional[str] = None
+    customer_neighborhood: Optional[str] = None
     delivery_address: Optional[str] = None  # None = recoge en tienda
     payment_method: str = "contra_entrega"
     items: List[OrderItemCreate]
@@ -254,6 +263,9 @@ class OrderOut(BaseModel):
     customer_email: Optional[str] = None
     customer_name: str
     customer_phone: str
+    customer_department: Optional[str] = None
+    customer_municipality: Optional[str] = None
+    customer_neighborhood: Optional[str] = None
     delivery_address: Optional[str]
     status: OrderStatus
     total: float

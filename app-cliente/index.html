@@ -131,6 +131,11 @@
       <div id="register-fields" style="display:none">
         <div class="field"><label>Nombre completo</label><input id="auth-name" type="text" placeholder="Tu nombre completo"></div>
         <div class="field"><label>Teléfono</label><input id="auth-phone" type="tel" placeholder="300 000 0000"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="field"><label>Departamento</label><input id="auth-department" type="text" placeholder="Ej: Magdalena"></div>
+          <div class="field"><label>Ciudad / Municipio</label><input id="auth-municipality" type="text" placeholder="Ej: Aracataca"></div>
+        </div>
+        <div class="field"><label>Barrio</label><input id="auth-neighborhood" type="text" placeholder="Ej: Villa del Río"></div>
         <div class="field"><label>Dirección habitual (opcional)</label><input id="auth-address" type="text" placeholder="Calle 10 # 20-30"></div>
       </div>
       <label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;padding:10px 12px;background:#EEF6F0;border:1px solid var(--green);border-radius:7px;font-size:12px;line-height:1.45;color:var(--ink);cursor:pointer;">
@@ -199,6 +204,7 @@
   </div>
   <div class="header-actions">
     <button class="header-action" onclick="window.location.href='perfiles.html'">Cambiar perfil</button>
+    <button class="header-action" id="distance-mode-btn" onclick="toggleDistanceLimit()" style="background:rgba(224,164,88,.22);border-color:var(--amber);color:#fff;">🌎 Ver todas las tiendas (Sin límite km)</button>
     <button class="header-action" onclick="requestCustomerLocation(true)">📍 Actualizar ubicación (5 km)</button>
     <button class="header-action" onclick="openStoresMap()">Tiendas en el mapa</button>
     <button class="header-action" onclick="openOrderHistory()">Mis pedidos</button>
@@ -423,10 +429,16 @@ async function submitCustomerAuth(){
 
   let name = '';
   let phone = '';
+  let department = '';
+  let municipality = '';
+  let neighborhood = '';
   let address = '';
   if(isCustomerRegister){
     name = document.getElementById('auth-name').value.trim();
     phone = document.getElementById('auth-phone').value.trim();
+    department = (document.getElementById('auth-department')?.value || '').trim();
+    municipality = (document.getElementById('auth-municipality')?.value || '').trim();
+    neighborhood = (document.getElementById('auth-neighborhood')?.value || '').trim();
     address = document.getElementById('auth-address').value.trim();
     const normalizedPhone = phone.replace(/[\s()-]/g, '');
     if(name.length < 2){
@@ -435,6 +447,10 @@ async function submitCustomerAuth(){
     }
     if(!/^\+?\d{7,15}$/.test(normalizedPhone)){
       errorBox.textContent = 'Escribe un teléfono válido.';
+      return;
+    }
+    if(department.length < 2 || municipality.length < 2 || neighborhood.length < 2){
+      errorBox.textContent = 'Ingresa tu departamento, ciudad/municipio y barrio.';
       return;
     }
   }
@@ -453,6 +469,9 @@ async function submitCustomerAuth(){
         name: cachedAccount.name,
         email: cachedAccount.email,
         phone: cachedAccount.phone,
+        department: cachedAccount.department || null,
+        municipality: cachedAccount.municipality || null,
+        neighborhood: cachedAccount.neighborhood || null,
         address: cachedAccount.address || null
       };
       localStorage.setItem('customer_token', customerToken);
@@ -484,7 +503,16 @@ async function submitCustomerAuth(){
       const regRes = await fetch(`${API_URL}/auth/customer/register`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({name, email, password, phone, address: address || null})
+        body:JSON.stringify({
+          name,
+          email,
+          password,
+          phone,
+          department: department || null,
+          municipality: municipality || null,
+          neighborhood: neighborhood || null,
+          address: address || null
+        })
       });
       if(regRes.status === 404){
         usedLocalFallback = true;
@@ -498,6 +526,9 @@ async function submitCustomerAuth(){
           email,
           password,
           phone,
+          department: department || null,
+          municipality: municipality || null,
+          neighborhood: neighborhood || null,
           address: address || null
         };
         accounts.push(newCustomer);
@@ -546,6 +577,9 @@ async function submitCustomerAuth(){
         name: matched.name,
         email: matched.email,
         phone: matched.phone,
+        department: matched.department || null,
+        municipality: matched.municipality || null,
+        neighborhood: matched.neighborhood || null,
         address: matched.address || null
       };
     }
@@ -595,10 +629,23 @@ let activeCategory = '';
 let sortMode = 'price';
 let productCards = [];
 const NEARBY_RADIUS_KM = 5;
+let ignoreDistanceLimit = localStorage.getItem('customer_ignore_distance') === 'true';
 let customerCoords = null;
 try{
   customerCoords = JSON.parse(localStorage.getItem('customer_coords') || 'null');
 }catch(_e){ customerCoords = null; }
+
+function toggleDistanceLimit(forceValue){
+  if(typeof forceValue === 'boolean'){
+    ignoreDistanceLimit = forceValue;
+  } else {
+    ignoreDistanceLimit = !ignoreDistanceLimit;
+  }
+  localStorage.setItem('customer_ignore_distance', ignoreDistanceLimit ? 'true' : 'false');
+  updateLocationBanner();
+  productCards = [];
+  loadProducts(document.getElementById('search-input').value || '');
+}
 
 function calculateDistanceKm(lat1, lon1, lat2, lon2){
   const R = 6371;
@@ -647,7 +694,29 @@ async function geocodeAddressCached(addressText){
 
 function updateLocationBanner(){
   const statusEl = document.getElementById('location-status');
+  const distBtn = document.getElementById('distance-mode-btn');
+  const searchInput = document.getElementById('search-input');
+  if(distBtn){
+    if(ignoreDistanceLimit){
+      distBtn.textContent = '📍 Solo tiendas cercanas (5 km)';
+      distBtn.style.background = 'rgba(42,107,71,.35)';
+      distBtn.style.borderColor = '#66c28f';
+    } else {
+      distBtn.textContent = '🌎 Ver todas las tiendas (Sin límite km)';
+      distBtn.style.background = 'rgba(224,164,88,.22)';
+      distBtn.style.borderColor = 'var(--amber)';
+    }
+  }
+  if(searchInput){
+    searchInput.placeholder = ignoreDistanceLimit
+      ? 'Buscar producto o tienda en toda la base de datos (sin límite de distancia)...'
+      : 'Buscar producto en tiendas a menos de 5 km...';
+  }
   if(!statusEl) return;
+  if(ignoreDistanceLimit){
+    statusEl.textContent = '🌎 Mostrando todas las tiendas y productos sin importar la distancia';
+    return;
+  }
   if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
     statusEl.textContent = `📍 Mostrando productos a menos de ${NEARBY_RADIUS_KM} km de ti`;
   } else {
@@ -678,7 +747,9 @@ function requestCustomerLocation(showAlert){
       updateLocationBanner();
       loadProducts(document.getElementById('search-input').value || '');
       if(showAlert){
-        alert(`Ubicación actualizada. Mostrando únicamente productos en tiendas a menos de ${NEARBY_RADIUS_KM} km.`);
+        alert(ignoreDistanceLimit
+          ? 'Ubicación actualizada. Se mostrará la distancia exacta a todas las tiendas.'
+          : `Ubicación actualizada. Mostrando únicamente productos en tiendas a menos de ${NEARBY_RADIUS_KM} km.`);
       }
     },
     async () => {
@@ -720,6 +791,10 @@ async function filterStoresWithinRadius(stores){
     return {...s, latitude: lat, longitude: lng, distance_km};
   }));
 
+  if(ignoreDistanceLimit){
+    return enriched;
+  }
+
   if(!customerCoords || !Number.isFinite(customerCoords.lat) || !Number.isFinite(customerCoords.lng)){
     return enriched;
   }
@@ -743,9 +818,12 @@ async function onSearch(q){
 async function loadProducts(q){
   const normalizedQuery = q.trim();
   const box = document.getElementById('results');
+  const loadingMsg = ignoreDistanceLimit
+    ? 'Buscando en todas las tiendas de la base de datos...'
+    : 'Buscando productos cercanos (≤ 5 km)...';
 
   // Mostrar caché instantáneamente mientras actualiza en segundo plano
-  if(normalizedQuery.length < 2 && productCards.length === 0){
+  if(normalizedQuery.length < 2 && productCards.length === 0 && !ignoreDistanceLimit){
     try{
       const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || '[]');
       if(Array.isArray(cached) && cached.length > 0){
@@ -753,13 +831,13 @@ async function loadProducts(q){
         renderCategoryFilters(productCards.map(c => c.product));
         await renderResults(productCards.map(c => c.product), false);
       } else {
-        box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+        box.innerHTML = `<div class="loading-state">${loadingMsg}</div>`;
       }
     }catch(_e){
-      box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+      box.innerHTML = `<div class="loading-state">${loadingMsg}</div>`;
     }
   } else if(productCards.length === 0){
-    box.innerHTML = '<div class="loading-state">Buscando productos cercanos (≤ 5 km)...</div>';
+    box.innerHTML = `<div class="loading-state">${loadingMsg}</div>`;
   }
 
   try{
@@ -768,9 +846,12 @@ async function loadProducts(q){
     if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
       params.set('lat', customerCoords.lat);
       params.set('lng', customerCoords.lng);
-      params.set('radius_km', NEARBY_RADIUS_KM);
+      params.set('radius_km', ignoreDistanceLimit ? 0 : NEARBY_RADIUS_KM);
+    } else if(ignoreDistanceLimit){
+      params.set('radius_km', 0);
     }
     const qs = params.toString() ? `?${params.toString()}` : '';
+    const scopeSuffix = ignoreDistanceLimit ? '(Todas las tiendas sin límite km)' : `(a menos de ${NEARBY_RADIUS_KM} km)`;
 
     // Intentar primero el endpoint unificado rápido (/products/catalog)
     const catRes = await fetch(`${API_URL}/products/catalog${qs}`);
@@ -781,12 +862,12 @@ async function loadProducts(q){
         availability: await filterStoresWithinRadius(entry.availability || [])
       })));
       productCards = filteredCards.filter(card => card.availability.length > 0);
-      if(normalizedQuery.length < 2){
+      if(normalizedQuery.length < 2 && !ignoreDistanceLimit){
         try{ localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(productCards)); }catch(_e){}
       }
       document.getElementById('results-title').textContent = normalizedQuery.length < 2
-        ? `Productos disponibles (a menos de ${NEARBY_RADIUS_KM} km)`
-        : `Resultados para "${normalizedQuery}" (≤ ${NEARBY_RADIUS_KM} km)`;
+        ? `Productos disponibles ${scopeSuffix}`
+        : `Resultados para "${normalizedQuery}" ${scopeSuffix}`;
       renderCategoryFilters(productCards.map(c => c.product));
       await renderResults(productCards.map(c => c.product), false);
       return;
@@ -797,12 +878,12 @@ async function loadProducts(q){
     if(!res.ok) throw new Error('No se pudo consultar el catálogo');
     const products = await res.json();
     document.getElementById('results-title').textContent = normalizedQuery.length < 2
-      ? `Productos disponibles (a menos de ${NEARBY_RADIUS_KM} km)`
-      : `Resultados para "${normalizedQuery}" (≤ ${NEARBY_RADIUS_KM} km)`;
+      ? `Productos disponibles ${scopeSuffix}`
+      : `Resultados para "${normalizedQuery}" ${scopeSuffix}`;
     activeCategory = '';
     productCards = [];
     await renderResults(products, true);
-    if(normalizedQuery.length < 2 && productCards.length > 0){
+    if(normalizedQuery.length < 2 && productCards.length > 0 && !ignoreDistanceLimit){
       try{ localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(productCards)); }catch(_e){}
     }
   }catch(error){
@@ -835,13 +916,16 @@ function changeSort(sort){
 
 async function renderResults(products, refreshCategories = false){
   const box = document.getElementById('results');
+  const expandBtnHtml = !ignoreDistanceLimit
+    ? `<div style="margin-top:12px;"><button class="add-btn" onclick="toggleDistanceLimit(true)">🌎 Buscar en todas las tiendas sin importar la distancia</button></div>`
+    : '';
   if(products.length === 0 && productCards.length === 0){
     renderCategoryFilters([]);
-    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin resultados cercanos</span><p>No encontramos productos disponibles en tiendas a menos de ${NEARBY_RADIUS_KM} km de tu ubicación.</p></div>`;
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">${ignoreDistanceLimit ? 'Sin resultados en la base de datos' : 'Sin resultados cercanos'}</span><p>${ignoreDistanceLimit ? 'No encontramos productos disponibles que coincidan con tu búsqueda.' : `No encontramos productos disponibles en tiendas a menos de ${NEARBY_RADIUS_KM} km de tu ubicación.`}</p>${expandBtnHtml}</div>`;
     return;
   }
   if(productCards.length === 0){
-    box.innerHTML = '<div class="loading-state">Comprobando tiendas a menos de 5 km...</div>';
+    box.innerHTML = `<div class="loading-state">${ignoreDistanceLimit ? 'Comprobando todas las tiendas...' : 'Comprobando tiendas a menos de 5 km...'}</div>`;
     const rawCards = await Promise.all(products.map(async p => {
       let avail = [];
       try{
@@ -849,7 +933,9 @@ async function renderResults(products, refreshCategories = false){
         if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
           params.set('lat', customerCoords.lat);
           params.set('lng', customerCoords.lng);
-          params.set('radius_km', NEARBY_RADIUS_KM);
+          params.set('radius_km', ignoreDistanceLimit ? 0 : NEARBY_RADIUS_KM);
+        } else if(ignoreDistanceLimit){
+          params.set('radius_km', 0);
         }
         const qs = params.toString() ? `?${params.toString()}` : '';
         const availRes = await fetch(`${API_URL}/products/${p.id}/availability${qs}`);
@@ -858,7 +944,6 @@ async function renderResults(products, refreshCategories = false){
       const nearbyAvail = await filterStoresWithinRadius(avail);
       return {product: p, availability: nearbyAvail};
     }));
-    // Solo mostrar productos que tengan stock en al menos 1 tienda dentro de los 5 km
     productCards = rawCards.filter(card => card.availability.length > 0);
     if(refreshCategories){
       renderCategoryFilters(productCards.map(card => card.product));
@@ -874,7 +959,7 @@ async function renderResults(products, refreshCategories = false){
       return priceA - priceB;
     });
   if(visibleCards.length === 0){
-    box.innerHTML = `<div class="empty-state"><span class="eyebrow">Sin productos a menos de ${NEARBY_RADIUS_KM} km</span><p>No hay productos disponibles en tiendas dentro de un radio de ${NEARBY_RADIUS_KM} km alrededor de ti.</p></div>`;
+    box.innerHTML = `<div class="empty-state"><span class="eyebrow">${ignoreDistanceLimit ? 'Sin productos disponibles' : `Sin productos a menos de ${NEARBY_RADIUS_KM} km`}</span><p>${ignoreDistanceLimit ? 'No hay tiendas con unidades disponibles para esta búsqueda.' : `No hay productos disponibles en tiendas dentro de un radio de ${NEARBY_RADIUS_KM} km alrededor de ti.`}</p>${expandBtnHtml}</div>`;
     return;
   }
 
@@ -903,7 +988,9 @@ async function openDetail(productId, name){
   if(customerCoords && Number.isFinite(customerCoords.lat) && Number.isFinite(customerCoords.lng)){
     params.set('lat', customerCoords.lat);
     params.set('lng', customerCoords.lng);
-    params.set('radius_km', NEARBY_RADIUS_KM);
+    params.set('radius_km', ignoreDistanceLimit ? 0 : NEARBY_RADIUS_KM);
+  } else if(ignoreDistanceLimit){
+    params.set('radius_km', 0);
   }
   const qs = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`${API_URL}/products/${productId}/availability${qs}`);
@@ -915,7 +1002,10 @@ async function openDetail(productId, name){
   currentProductUnit = stores[0]?.unit || 'unidad';
   currentProductImage = product?.image_url || '';
   if(stores.length === 0){
-    document.getElementById('detail-stores').innerHTML = `<div class="empty-state"><span class="eyebrow">Fuera de rango</span><p>No hay tiendas dentro de ${NEARBY_RADIUS_KM} km con este producto.</p></div>`;
+    const expandBtn = !ignoreDistanceLimit
+      ? `<div style="margin-top:12px;"><button class="add-btn" onclick="toggleDistanceLimit(true); openDetail(${productId}, '${name.replace(/'/g,"")}')">🌎 Ver todas las tiendas sin importar la distancia</button></div>`
+      : '';
+    document.getElementById('detail-stores').innerHTML = `<div class="empty-state"><span class="eyebrow">Fuera de rango</span><p>No hay tiendas dentro de ${NEARBY_RADIUS_KM} km con este producto.</p>${expandBtn}</div>`;
     return;
   }
   document.getElementById('detail-stores').innerHTML = stores.map(s => {
@@ -923,7 +1013,10 @@ async function openDetail(productId, name){
     const isWeight = unit !== 'unidad';
     const step = isWeight ? 0.5 : 1;
     const min = isWeight ? 0.01 : 1;
-    const distBadge = Number.isFinite(s.distance_km) ? `<span class="badge" style="margin-right:6px;">📍 A ${s.distance_km.toFixed(1)} km</span>` : '';
+    const isFar = Number.isFinite(s.distance_km) && s.distance_km > NEARBY_RADIUS_KM;
+    const distBadge = Number.isFinite(s.distance_km)
+      ? `<span class="badge" style="margin-right:6px;${isFar ? 'background:#fef3c7;color:#92400e;' : ''}">📍 A ${s.distance_km.toFixed(1)} km${isFar ? ' (Lejos)' : ''}</span>`
+      : '';
     return `
     <div class="store-option">
       <div>
@@ -1073,6 +1166,9 @@ function openCheckout(){
   const offersDelivery = selectedStore.offers_delivery !== false;
   const defaultName = (customerProfile && customerProfile.name) || '';
   const defaultPhone = (customerProfile && customerProfile.phone) || '';
+  const defaultDepartment = (customerProfile && customerProfile.department) || '';
+  const defaultMunicipality = (customerProfile && customerProfile.municipality) || '';
+  const defaultNeighborhood = (customerProfile && customerProfile.neighborhood) || '';
   const defaultAddress = (customerProfile && customerProfile.address) || '';
   isDelivery = false;
   document.getElementById('checkout-content').innerHTML = `
@@ -1090,7 +1186,15 @@ function openCheckout(){
 
     <div class="field"><label>Tu nombre</label><input type="text" id="chk-name" value="${defaultName.replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>Tu teléfono</label><input type="text" id="chk-phone" value="${defaultPhone.replace(/"/g, '&quot;')}"></div>
-    <div class="field" id="address-field" style="display:none;"><label>Dirección de entrega</label><input type="text" id="chk-address" value="${defaultAddress.replace(/"/g, '&quot;')}"></div>
+    <div style="background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">📍 Tu ubicación (visible para la tienda)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="field" style="margin-bottom:8px;"><label>Departamento</label><input type="text" id="chk-department" placeholder="Ej. Atlántico" value="${defaultDepartment.replace(/"/g, '&quot;')}"></div>
+        <div class="field" style="margin-bottom:8px;"><label>Ciudad / Municipio</label><input type="text" id="chk-municipality" placeholder="Ej. Barranquilla" value="${defaultMunicipality.replace(/"/g, '&quot;')}"></div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Barrio</label><input type="text" id="chk-neighborhood" placeholder="Ej. El Prado" value="${defaultNeighborhood.replace(/"/g, '&quot;')}"></div>
+    </div>
+    <div class="field" id="address-field" style="display:none;"><label>Dirección exacta de entrega</label><input type="text" id="chk-address" placeholder="Calle / Carrera / Número / Casa o Apto" value="${defaultAddress.replace(/"/g, '&quot;')}"></div>
     <div class="field"><label>Forma de pago</label><select id="chk-payment"><option value="contra_entrega">Pagar al recibir</option></select></div>
 
     <p class="form-error" id="checkout-error"></p>
@@ -1120,12 +1224,19 @@ function saveCustomerOrderLocally(orderRecord){
 async function submitOrder(){
   const name = document.getElementById('chk-name').value.trim();
   const phone = document.getElementById('chk-phone').value.trim();
+  const department = (document.getElementById('chk-department')?.value || '').trim();
+  const municipality = (document.getElementById('chk-municipality')?.value || '').trim();
+  const neighborhood = (document.getElementById('chk-neighborhood')?.value || '').trim();
   const address = isDelivery ? document.getElementById('chk-address').value.trim() : null;
   const errorBox = document.getElementById('checkout-error');
   const button = document.getElementById('confirm-order-button');
   const normalizedPhone = phone.replace(/[\s()-]/g, '');
   if(name.length < 2){ showCheckoutError('Escribe tu nombre completo.'); return; }
   if(!/^\+?\d{7,15}$/.test(normalizedPhone)){ showCheckoutError('Escribe un teléfono válido.'); return; }
+  if(department.length < 2 || municipality.length < 2 || neighborhood.length < 2){
+    showCheckoutError('Indica tu departamento, ciudad/municipio y barrio para que la tienda sepa desde dónde realizas el pedido.');
+    return;
+  }
   if(isDelivery && address.length < 5){ showCheckoutError('Escribe una dirección de entrega válida.'); return; }
   errorBox.style.display = 'none';
   button.disabled = true;
@@ -1138,6 +1249,9 @@ async function submitOrder(){
     customer_email: customerProfile ? customerProfile.email : null,
     customer_name: name,
     customer_phone: phone,
+    customer_department: department,
+    customer_municipality: municipality,
+    customer_neighborhood: neighborhood,
     delivery_address: address,
     payment_method: document.getElementById('chk-payment').value,
     items: cart.map(i => ({product_id: i.product_id, quantity: i.quantity}))
@@ -1167,6 +1281,9 @@ async function submitOrder(){
     if(customerProfile){
       customerProfile.name = name;
       customerProfile.phone = phone;
+      customerProfile.department = department;
+      customerProfile.municipality = municipality;
+      customerProfile.neighborhood = neighborhood;
       if(address) customerProfile.address = address;
       localStorage.setItem('customer_profile', JSON.stringify(customerProfile));
       document.getElementById('customer-badge').textContent = `${customerProfile.name} · ${customerProfile.email}`;
@@ -1242,7 +1359,7 @@ async function renderTracking(){
 async function openStoresMap(){
   document.getElementById('stores-map-modal').style.display = 'block';
   const list = document.getElementById('stores-map-list');
-  list.innerHTML = '<div class="loading-state">Buscando tiendas a menos de 5 km...</div>';
+  list.innerHTML = `<div class="loading-state">${ignoreDistanceLimit ? 'Cargando todas las tiendas...' : 'Buscando tiendas a menos de 5 km...'}</div>`;
   try{
     const res = await fetch(`${API_URL}/stores`);
     if(!res.ok) throw new Error('No se pudieron cargar las tiendas');
@@ -1252,7 +1369,13 @@ async function openStoresMap(){
       address: [store.address, store.neighborhood, store.municipality, store.department].filter(Boolean).join(', ')
     }));
     const stores = await filterStoresWithinRadius(mappedStores);
-    if(!stores.length){ list.innerHTML = `<div class="empty-state"><p>No hay tiendas registradas dentro de ${NEARBY_RADIUS_KM} km de tu ubicación.</p></div>`; return; }
+    if(!stores.length){
+      const expandBtn = !ignoreDistanceLimit
+        ? `<div style="margin-top:12px;"><button class="add-btn" onclick="toggleDistanceLimit(true); openStoresMap()">🌎 Ver todas las tiendas sin importar la distancia</button></div>`
+        : '';
+      list.innerHTML = `<div class="empty-state"><p>${ignoreDistanceLimit ? 'No hay tiendas registradas en la base de datos.' : `No hay tiendas registradas dentro de ${NEARBY_RADIUS_KM} km de tu ubicación.`}</p>${expandBtn}</div>`;
+      return;
+    }
     const first = stores.find(store => store.latitude && store.longitude) || stores[0];
     const query = first.latitude && first.longitude ? `${first.latitude},${first.longitude}` : (first.address || 'tiendas');
     document.getElementById('stores-map-frame').src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;

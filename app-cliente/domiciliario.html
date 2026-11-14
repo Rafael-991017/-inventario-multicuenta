@@ -376,6 +376,13 @@ async function loadDeliveries(){
         order.status === 'en_camino' ||
         (localAcc && courier && localAcc.courier_id === courier.id)
       );
+      const locParts = [
+        order.customer_neighborhood ? `Barrio ${order.customer_neighborhood}` : null,
+        order.customer_municipality || null,
+        order.customer_department || null
+      ].filter(Boolean);
+      const locLine = locParts.length ? `<br><strong>Ubicación cliente:</strong> 📍 ${locParts.join(' · ')}` : '';
+      const fullMapAddress = [order.delivery_address, order.customer_neighborhood, order.customer_municipality, order.customer_department].filter(Boolean).join(', ');
       return `<article class="delivery-card">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
           <h3>Pedido #${order.id} · ${order.store_name}</h3>
@@ -384,11 +391,11 @@ async function loadDeliveries(){
             : `<span style="background:#FEF3D6;color:#8F6214;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;">⏳ Disponible para aceptar</span>`
           }
         </div>
-        <p><strong>Cliente:</strong> ${order.customer_name}<br><strong>Dirección:</strong> ${order.delivery_address}<br><strong>Total:</strong> $${Number(order.total).toLocaleString('es-CO')}</p>
+        <p><strong>Cliente:</strong> ${order.customer_name}${locLine}<br><strong>Dirección:</strong> ${order.delivery_address}<br><strong>Total:</strong> $${Number(order.total).toLocaleString('es-CO')}</p>
         <div class="delivery-actions">
           ${isAcceptedByMe
-            ? `<button onclick="updateDeliveryStatus(${order.id}, 'entregado')" style="background:var(--green);color:#fff;">✓ Marcar entregado</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(order.delivery_address)}')">Ver ruta</button>`
-            : `<button onclick="acceptDelivery(${order.id})">✓ Aceptar entrega</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(order.delivery_address)}')">Ver dirección</button>`
+            ? `<button onclick="updateDeliveryStatus(${order.id}, 'entregado')" style="background:var(--green);color:#fff;">✓ Marcar entregado</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(fullMapAddress)}')">Ver ruta</button>`
+            : `<button onclick="acceptDelivery(${order.id})">✓ Aceptar entrega</button><button class="secondary-action" onclick="openMap('${encodeURIComponent(fullMapAddress)}')">Ver dirección</button>`
           }
         </div>
       </article>`;

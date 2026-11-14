@@ -1484,7 +1484,16 @@ async function loadOrders(){
     }).join('<br>') || '—';
     const orderProfit = Math.round((Number(o.total) || 0) - orderCost);
 
-    let deliveryHtml = '<strong>Recoge en tienda</strong><br><span style="color:var(--green);font-size:12px;">✓ Preparar para entrega en mostrador</span>';
+    const customerLocParts = [
+      o.customer_neighborhood ? `Barrio ${o.customer_neighborhood}` : null,
+      o.customer_municipality ? o.customer_municipality : null,
+      o.customer_department ? o.customer_department : null
+    ].filter(Boolean);
+    const customerLocBadge = customerLocParts.length
+      ? `<div style="margin-top:4px;padding:4px 8px;background:#f0f4f8;border:1px solid #d7e0ea;border-radius:5px;font-size:11px;color:#1e293b;line-height:1.35;">📍 <strong>Ubicación del cliente:</strong><br>${customerLocParts.join(' · ')}</div>`
+      : '';
+
+    let deliveryHtml = `<strong>Recoge en tienda</strong><br><span style="color:var(--green);font-size:12px;">✓ Preparar para entrega en mostrador</span>${customerLocBadge}`;
     if(o.delivery_address){
       let courierBadge = '';
       if(o.status === 'entregado'){
@@ -1494,13 +1503,17 @@ async function loadOrders(){
       } else if(o.status !== 'cancelado'){
         courierBadge = `<div style="margin-top:6px;display:inline-block;background:#FEF3D6;color:#8F6214;padding:4px 9px;border-radius:6px;font-size:12px;font-weight:600;">⏳ Esperando que un domiciliario acepte</div>`;
       }
-      deliveryHtml = `<div>Domicilio: ${o.delivery_address}</div>${courierBadge}`;
+      deliveryHtml = `<div><strong>Dirección:</strong> ${o.delivery_address}</div>${customerLocBadge}${courierBadge}`;
     }
 
     return `
     <tr>
       <td class="mono">#${o.id}</td>
-      <td>${o.customer_name}<br><span style="color:var(--muted);font-size:12px;">${o.customer_phone}</span></td>
+      <td>
+        <strong>${o.customer_name}</strong><br>
+        <span style="color:var(--muted);font-size:12px;">📞 ${o.customer_phone}</span>
+        ${customerLocParts.length ? `<br><span style="color:var(--accent);font-size:11px;font-weight:600;">📍 ${customerLocParts.join(', ')}</span>` : ''}
+      </td>
       <td style="font-size:13px;line-height:1.45;">${itemsText}</td>
       <td>${deliveryHtml}</td>
       <td class="mono">

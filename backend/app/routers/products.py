@@ -29,10 +29,9 @@ def list_catalog_with_availability(
     db=Depends(get_db),
 ):
     """Devuelve todos los productos junto con su disponibilidad en tiendas en una sola petición rápida."""
-    products = [
+    all_products = [
         product for product in list_collection("products")
-        if (not q or q.lower() in product.get("name", "").lower())
-        and (not category or product.get("category") == category)
+        if (not category or product.get("category") == category)
     ]
     stores = {store["id"]: store for store in list_collection("stores")}
     avail_by_product = {}
@@ -46,7 +45,7 @@ def list_catalog_with_availability(
             continue
         s_lat = store.get("latitude")
         s_lng = store.get("longitude")
-        if lat is not None and lng is not None and s_lat is not None and s_lng is not None:
+        if radius_km and radius_km > 0 and lat is not None and lng is not None and s_lat is not None and s_lng is not None:
             if haversine_km(lat, lng, float(s_lat), float(s_lng)) > radius_km:
                 continue
         avail_by_product.setdefault(pid, []).append({
@@ -61,13 +60,24 @@ def list_catalog_with_availability(
             "unit": item.get("unit", "unidad"),
         })
 
-    return [
-        {
+    q_norm = q.strip().lower() if q else ""
+    results = []
+    for p in all_products:
+        avail = avail_by_product.get(p["id"], [])
+        if q_norm:
+            name_match = q_norm in (p.get("name") or "").lower() or q_norm in (p.get("category") or "").lower()
+            if not name_match:
+                avail = [
+                    a for a in avail
+                    if q_norm in (a.get("store_name") or "").lower() or q_norm in (a.get("address") or "").lower()
+                ]
+                if not avail:
+                    continue
+        results.append({
             "product": p,
-            "availability": avail_by_product.get(p["id"], []),
-        }
-        for p in products
-    ]
+            "availability": avail,
+        })
+    return results
 
 
 @router.get("", response_model=List[schemas.ProductOut])
@@ -163,7 +173,7 @@ def product_availability(
             continue
         s_lat = store.get("latitude")
         s_lng = store.get("longitude")
-        if lat is not None and lng is not None and s_lat is not None and s_lng is not None:
+        if radius_km and radius_km > 0 and lat is not None and lng is not None and s_lat is not None and s_lng is not None:
             if haversine_km(lat, lng, float(s_lat), float(s_lng)) > radius_km:
                 continue
         results.append({
