@@ -137,3 +137,60 @@ def login_customer(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(
 @router.get("/customer/me", response_model=schemas.CustomerOut)
 def get_my_customer(current_customer: dict = Depends(auth.get_current_customer)):
     return current_customer
+
+
+def _digits_only(value: str) -> str:
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
+@router.post("/reset-password")
+def reset_store_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
+    email_clean = str(body.email).strip().lower()
+    store = find_by_field("stores", "email", email_clean) or find_by_field("stores", "email", str(body.email).strip())
+    if not store:
+        raise HTTPException(404, "No se encontró ninguna tienda con ese correo")
+    input_digits = _digits_only(body.verification)
+    store_digits = _digits_only(store.get("phone") or "")
+    if not input_digits or input_digits != store_digits:
+        raise HTTPException(400, "El teléfono ingresado no coincide con el registrado en la tienda")
+    if len(body.new_password or "") < 4:
+        raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
+    new_hash = auth.hash_password(body.new_password)
+    collection("stores").document(str(store["id"])).update({"hashed_password": new_hash})
+    return {"message": "Contraseña de la tienda restablecida correctamente"}
+
+
+@router.post("/customer/reset-password")
+def reset_customer_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
+    email_clean = str(body.email).strip().lower()
+    customer = find_by_field("customers", "email", email_clean) or find_by_field("customers", "email", str(body.email).strip())
+    if not customer:
+        raise HTTPException(404, "No se encontró ningún cliente con ese correo")
+    input_digits = _digits_only(body.verification)
+    customer_digits = _digits_only(customer.get("phone") or "")
+    if not input_digits or input_digits != customer_digits:
+        raise HTTPException(400, "El teléfono ingresado no coincide con el registrado en tu cuenta")
+    if len(body.new_password or "") < 4:
+        raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
+    new_hash = auth.hash_password(body.new_password)
+    collection("customers").document(str(customer["id"])).update({"hashed_password": new_hash})
+    return {"message": "Contraseña restablecida correctamente"}
+
+
+@router.post("/courier/reset-password")
+def reset_courier_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
+    email_clean = str(body.email).strip().lower()
+    courier = find_by_field("couriers", "email", email_clean) or find_by_field("couriers", "email", str(body.email).strip())
+    if not courier:
+        raise HTTPException(404, "No se encontró ningún domiciliario con ese correo")
+    input_digits = _digits_only(body.verification)
+    cedula_digits = _digits_only(courier.get("cedula") or "")
+    phone_digits = _digits_only(courier.get("phone") or "")
+    if not input_digits or input_digits not in {cedula_digits, phone_digits}:
+        raise HTTPException(400, "La Cédula de Ciudadanía o teléfono no coincide con el registrado")
+    if len(body.new_password or "") < 4:
+        raise HTTPException(400, "La nueva contraseña debe tener al menos 4 caracteres")
+    new_hash = auth.hash_password(body.new_password)
+    collection("couriers").document(str(courier["id"])).update({"hashed_password": new_hash})
+    return {"message": "Contraseña de domiciliario restablecida correctamente"}
+

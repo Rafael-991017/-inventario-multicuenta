@@ -138,12 +138,31 @@
         <span>Acepto conscientemente la <a href="#" onclick="openPrivacyPolicyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
       </label>
       <button class="primary" id="auth-submit" onclick="submitCustomerAuth()">Entrar</button>
+      <div style="text-align:center;margin-top:10px;">
+        <button type="button" onclick="openCustomerResetModal()" style="border:0;background:none;color:var(--green);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
+      </div>
       <button class="secondary" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
       <p class="error" id="auth-error"></p>
       <div class="toggle"><span id="toggle-label">¿Aún no tienes cuenta?</span> <button type="button" onclick="toggleCustomerAuth()" id="toggle-button">Regístrate</button></div>
     </div>
   </div>
 </section>
+
+<!-- Modal Restablecer Contraseña Cliente -->
+<div class="modal-overlay" id="customer-reset-modal" style="z-index:9998;">
+  <div class="modal" style="width:min(420px,100%);border-radius:12px;padding:24px;">
+    <h3 style="margin:0 0 8px;font-size:18px;color:var(--navy);">Restablecer contraseña</h3>
+    <p style="margin:0 0 14px;font-size:13px;color:var(--muted);">Ingresa tu correo y el teléfono registrado en tu cuenta para verificar tu identidad y crear una nueva contraseña.</p>
+    <div class="field"><label>Correo registrado</label><input id="reset-cust-email" type="email" placeholder="cliente@correo.com"></div>
+    <div class="field"><label>Teléfono registrado (verificación)</label><input id="reset-cust-phone" type="tel" placeholder="300 000 0000"></div>
+    <div class="field"><label>Nueva contraseña</label><input id="reset-cust-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <p id="reset-cust-msg" style="font-size:13px;min-height:18px;margin:8px 0;"></p>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button type="button" class="secondary" onclick="closeCustomerResetModal()" style="margin-top:0;flex:1;padding:11px;border:1px solid var(--line);border-radius:7px;background:transparent;cursor:pointer;font-weight:600;">Cancelar</button>
+      <button type="button" class="btn-confirm" onclick="submitCustomerPasswordReset()" style="margin-top:0;flex:1;">Guardar clave</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal de Política de Privacidad -->
 <div class="modal-overlay" id="privacy-policy-modal" style="z-index:9999;">
@@ -312,6 +331,59 @@ function toggleCustomerAuth(){
   document.getElementById('toggle-label').textContent = isCustomerRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?';
   document.getElementById('toggle-button').textContent = isCustomerRegister ? 'Inicia sesión' : 'Regístrate';
   document.getElementById('auth-error').textContent = '';
+}
+
+function openCustomerResetModal(){
+  document.getElementById('reset-cust-email').value = document.getElementById('auth-email').value.trim();
+  document.getElementById('reset-cust-phone').value = '';
+  document.getElementById('reset-cust-pass').value = '';
+  document.getElementById('reset-cust-msg').textContent = '';
+  document.getElementById('customer-reset-modal').style.display = 'flex';
+}
+function closeCustomerResetModal(){
+  document.getElementById('customer-reset-modal').style.display = 'none';
+}
+async function submitCustomerPasswordReset(){
+  const email = document.getElementById('reset-cust-email').value.trim().toLowerCase();
+  const verification = document.getElementById('reset-cust-phone').value.trim();
+  const new_password = document.getElementById('reset-cust-pass').value;
+  const msg = document.getElementById('reset-cust-msg');
+  msg.style.color = 'var(--red)';
+  if(!email || !verification || !new_password || new_password.length < 4){
+    msg.textContent = 'Completa correo, teléfono registrado y una contraseña de al menos 4 caracteres.';
+    return;
+  }
+  const inputDigits = verification.replace(/\D/g, '');
+  let updatedLocal = false;
+  const localList = getLocalCustomers();
+  const localIdx = localList.findIndex(c => (c.email || '').toLowerCase() === email && String(c.phone || '').replace(/\D/g, '') === inputDigits);
+  if(localIdx >= 0){
+    localList[localIdx].password = new_password;
+    saveLocalCustomers(localList);
+    updatedLocal = true;
+  }
+  try{
+    const res = await fetch(`${API_URL}/auth/customer/reset-password`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, verification, new_password})
+    });
+    if(!res.ok && !updatedLocal){
+      const err = await res.json().catch(() => ({}));
+      msg.textContent = err.detail || 'No coincidieron el correo y el teléfono registrado.';
+      return;
+    }
+  }catch(_e){
+    if(!updatedLocal){
+      msg.textContent = 'No se pudo verificar la cuenta. Revisa tu conexión.';
+      return;
+    }
+  }
+  msg.style.color = 'var(--green)';
+  msg.textContent = '¡Contraseña actualizada! Ya puedes iniciar sesión con tu nueva clave.';
+  document.getElementById('auth-email').value = email;
+  document.getElementById('auth-password').value = new_password;
+  setTimeout(() => closeCustomerResetModal(), 1200);
 }
 
 function getLocalCustomers(){

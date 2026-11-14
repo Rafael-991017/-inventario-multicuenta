@@ -201,6 +201,7 @@
             <th>Teléfono</th>
             <th>Dirección / Ubicación</th>
             <th>Servicio domicilio</th>
+            <th>Acciones del Admin</th>
           </tr>
         </thead>
         <tbody id="stores-tbody"></tbody>
@@ -221,6 +222,7 @@
             <th>Correo electrónico</th>
             <th>Teléfono</th>
             <th>Dirección registrada</th>
+            <th>Acciones del Admin</th>
           </tr>
         </thead>
         <tbody id="customers-tbody"></tbody>
@@ -456,11 +458,56 @@ function renderCouriers(filter = ''){
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             ${status !== 'aprobado' ? `<button class="btn approve" onclick="setCourierApproval(${c.id}, '${safeEmail}', 'aprobado')">✓ Aprobar</button>` : ''}
             ${status !== 'rechazado' ? `<button class="btn reject" onclick="setCourierApproval(${c.id}, '${safeEmail}', 'rechazado')">✕ Rechazar</button>` : ''}
+            <button class="btn reject" onclick="deleteAccount('couriers', ${c.id || 0}, '${safeEmail}', '${(c.name || '').replace(/'/g, "\\'")}')">🗑 Eliminar cuenta</button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+async function deleteAccount(type, id, email, name){
+  const roleLabel = type === 'stores' ? 'la tienda' : (type === 'customers' ? 'el cliente' : 'el domiciliario');
+  const reason = prompt(`¿Eliminar definitivamente la cuenta de ${roleLabel} "${name}" (${email}) por incumplimiento de normas o actividad ilegal?\n\nEscribe el motivo o presiona Aceptar para confirmar la eliminación:`, 'Incumplimiento de normas / actividad no permitida');
+  if(reason === null) return;
+
+  if(id){
+    try{
+      await fetch(`${API_URL}/admin/${type}/${id}`, {
+        method:'DELETE',
+        headers:{'Authorization': `Bearer ${adminToken}`}
+      });
+    }catch(_e){}
+  }
+
+  const key = (email || '').toLowerCase();
+  if(type === 'couriers'){
+    const reg = getLocalCouriersRegistry();
+    if(key && reg[key]){
+      delete reg[key];
+      saveLocalCouriersRegistry(reg);
+    }
+    allCouriers = allCouriers.filter(c => c.id !== id && (c.email || '').toLowerCase() !== key);
+  } else if(type === 'customers'){
+    try{
+      const localList = JSON.parse(localStorage.getItem(LOCAL_CUSTOMERS_KEY) || '[]');
+      const updated = localList.filter(c => c.id !== id && (c.email || '').toLowerCase() !== key);
+      localStorage.setItem(LOCAL_CUSTOMERS_KEY, JSON.stringify(updated));
+    }catch(_e){}
+    allCustomers = allCustomers.filter(c => c.id !== id && (c.email || '').toLowerCase() !== key);
+  } else if(type === 'stores'){
+    allStores = allStores.filter(s => s.id !== id && (s.email || '').toLowerCase() !== key);
+  }
+
+  document.getElementById('count-stores').textContent = allStores.length;
+  document.getElementById('count-customers').textContent = allCustomers.length;
+  document.getElementById('count-couriers').textContent = allCouriers.length;
+  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+
+  renderCouriers(document.getElementById('search-couriers').value);
+  renderStores(document.getElementById('search-stores').value);
+  renderCustomers(document.getElementById('search-customers').value);
+  alert(`Cuenta de "${name}" eliminada correctamente.`);
 }
 
 async function setCourierApproval(courierId, email, newStatus){
@@ -503,11 +550,13 @@ function renderStores(filter = ''){
     (s.neighborhood || '').toLowerCase().includes(q)
   );
   if(filtered.length === 0){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No hay tiendas registradas.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No hay tiendas registradas.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(s => {
     const loc = [s.address, s.neighborhood, s.municipality, s.department].filter(Boolean).join(', ') || 'Sin dirección';
+    const safeEmail = (s.email || '').replace(/'/g, "\\'");
+    const safeName = (s.name || '').replace(/'/g, "\\'");
     return `
       <tr>
         <td class="mono">#${s.id}</td>
@@ -516,6 +565,7 @@ function renderStores(filter = ''){
         <td class="mono">${s.phone || '—'}</td>
         <td>${loc}</td>
         <td>${s.offers_delivery !== false ? '<span class="pill pill-aprobado">Sí ofrece</span>' : '<span class="pill pill-pendiente">Solo tienda</span>'}</td>
+        <td><button class="btn reject" onclick="deleteAccount('stores', ${s.id || 0}, '${safeEmail}', '${safeName}')">🗑 Eliminar cuenta</button></td>
       </tr>
     `;
   }).join('');
@@ -531,18 +581,23 @@ function renderCustomers(filter = ''){
     (c.phone || '').toLowerCase().includes(q)
   );
   if(filtered.length === 0){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No hay clientes registrados todavía.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No hay clientes registrados todavía.</div></td></tr>`;
     return;
   }
-  tbody.innerHTML = filtered.map(c => `
-    <tr>
-      <td class="mono">#${c.id || '—'}</td>
-      <td><strong>${c.name}</strong></td>
-      <td>${c.email}</td>
-      <td class="mono">${c.phone || '—'}</td>
-      <td>${c.address || '—'}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = filtered.map(c => {
+    const safeEmail = (c.email || '').replace(/'/g, "\\'");
+    const safeName = (c.name || '').replace(/'/g, "\\'");
+    return `
+      <tr>
+        <td class="mono">#${c.id || '—'}</td>
+        <td><strong>${c.name}</strong></td>
+        <td>${c.email}</td>
+        <td class="mono">${c.phone || '—'}</td>
+        <td>${c.address || '—'}</td>
+        <td><button class="btn reject" onclick="deleteAccount('customers', ${c.id || 0}, '${safeEmail}', '${safeName}')">🗑 Eliminar cuenta</button></td>
+      </tr>
+    `;
+  }).join('');
 }
 
 if(adminToken && adminProfile){

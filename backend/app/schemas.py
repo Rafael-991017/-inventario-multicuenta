@@ -271,3 +271,10 @@ class OrderOut(BaseModel):
 
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    verification: str
+    new_password: str
+

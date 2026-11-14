@@ -116,3 +116,53 @@ def update_courier_approval(
     data.update(updates)
     data["id"] = courier_id
     return _normalize_courier(data)
+
+
+@router.delete("/stores/{store_id}")
+def delete_store_account(
+    store_id: int,
+    current_admin: dict = Depends(auth.get_current_admin),
+    db=Depends(get_db),
+):
+    ref = collection("stores").document(str(store_id))
+    snap = ref.get()
+    if not snap.exists:
+        raise HTTPException(404, "Tienda no encontrada")
+    # Eliminar también su inventario y proveedores asociados
+    for inv in list_collection("inventory"):
+        if inv.get("store_id") == store_id:
+            collection("inventory").document(str(inv["id"])).delete()
+    for sup in list_collection("suppliers"):
+        if sup.get("store_id") == store_id:
+            collection("suppliers").document(str(sup["id"])).delete()
+    ref.delete()
+    return {"message": "Cuenta de tienda eliminada correctamente", "id": store_id}
+
+
+@router.delete("/customers/{customer_id}")
+def delete_customer_account(
+    customer_id: int,
+    current_admin: dict = Depends(auth.get_current_admin),
+    db=Depends(get_db),
+):
+    ref = collection("customers").document(str(customer_id))
+    snap = ref.get()
+    if not snap.exists:
+        raise HTTPException(404, "Cliente no encontrado")
+    ref.delete()
+    return {"message": "Cuenta de cliente eliminada correctamente", "id": customer_id}
+
+
+@router.delete("/couriers/{courier_id}")
+def delete_courier_account(
+    courier_id: int,
+    current_admin: dict = Depends(auth.get_current_admin),
+    db=Depends(get_db),
+):
+    ref = collection("couriers").document(str(courier_id))
+    snap = ref.get()
+    if not snap.exists:
+        raise HTTPException(404, "Domiciliario no encontrado")
+    ref.delete()
+    return {"message": "Cuenta de domiciliario eliminada correctamente", "id": courier_id}
+

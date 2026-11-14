@@ -34,6 +34,9 @@
         <span>Acepto conscientemente la <a href="#" onclick="openPrivacyPolicyModal(); return false;" style="color:var(--green);font-weight:700;text-decoration:underline;">Política de Privacidad y Tratamiento de Datos Personales de Venta Fast</a> (Ley 1581 de 2012).</span>
       </label>
       <button class="primary" id="auth-submit" onclick="submitAuth()">Entrar</button>
+      <div style="text-align:center;margin-top:10px;">
+        <button type="button" onclick="openCourierResetModal()" style="border:0;background:none;color:var(--green);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline;">¿Olvidaste tu contraseña?</button>
+      </div>
       <button class="secondary" type="button" onclick="window.location.href='perfiles.html'">← Volver al inicio</button>
       <p class="error" id="auth-error"></p>
       <div class="notice" id="auth-notice"></div>
@@ -41,6 +44,22 @@
     </div>
   </div>
 </section>
+
+<!-- Modal Restablecer Contraseña Domiciliario -->
+<div id="courier-reset-modal" style="display:none;position:fixed;inset:0;background:rgba(27,42,65,.8);z-index:9998;align-items:center;justify-content:center;padding:16px;">
+  <div style="width:min(420px,100%);background:var(--paper);border-radius:12px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.35);">
+    <h3 style="margin:0 0 8px;font-size:18px;color:var(--navy);">Restablecer contraseña</h3>
+    <p style="margin:0 0 14px;font-size:13px;color:var(--muted);">Ingresa tu correo y tu Cédula de Ciudadanía (o teléfono) registrada para verificar tu identidad y crear una nueva contraseña.</p>
+    <div class="field"><label>Correo registrado</label><input id="reset-cour-email" type="email" placeholder="domiciliario@correo.com"></div>
+    <div class="field"><label>Cédula de Ciudadanía o Teléfono registrado</label><input id="reset-cour-verif" type="text" placeholder="Ej: 1000123456"></div>
+    <div class="field"><label>Nueva contraseña</label><input id="reset-cour-pass" type="password" placeholder="Mínimo 4 caracteres"></div>
+    <p id="reset-cour-msg" style="font-size:13px;min-height:18px;margin:8px 0;"></p>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button type="button" class="secondary" onclick="closeCourierResetModal()" style="margin-top:0;flex:1;">Cancelar</button>
+      <button type="button" class="primary" onclick="submitCourierPasswordReset()" style="margin-top:0;flex:1;">Guardar clave</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal de Política de Privacidad -->
 <div id="privacy-policy-modal" style="display:none;position:fixed;inset:0;background:rgba(27,42,65,.8);z-index:9999;align-items:center;justify-content:center;padding:16px;">
@@ -123,6 +142,62 @@ function toggleAuth(){
   document.getElementById('toggle-button').textContent = isRegister ? 'Inicia sesión' : 'Regístrate';
   document.getElementById('auth-error').textContent = '';
   document.getElementById('auth-notice').style.display = 'none';
+}
+
+function openCourierResetModal(){
+  document.getElementById('reset-cour-email').value = document.getElementById('auth-email').value.trim();
+  document.getElementById('reset-cour-verif').value = '';
+  document.getElementById('reset-cour-pass').value = '';
+  document.getElementById('reset-cour-msg').textContent = '';
+  document.getElementById('courier-reset-modal').style.display = 'flex';
+}
+function closeCourierResetModal(){
+  document.getElementById('courier-reset-modal').style.display = 'none';
+}
+async function submitCourierPasswordReset(){
+  const email = document.getElementById('reset-cour-email').value.trim().toLowerCase();
+  const verification = document.getElementById('reset-cour-verif').value.trim();
+  const new_password = document.getElementById('reset-cour-pass').value;
+  const msg = document.getElementById('reset-cour-msg');
+  msg.style.color = 'var(--red)';
+  if(!email || !verification || !new_password || new_password.length < 4){
+    msg.textContent = 'Completa correo, cédula/teléfono y una contraseña de al menos 4 caracteres.';
+    return;
+  }
+  const inputDigits = verification.replace(/\D/g, '');
+  let updatedLocal = false;
+  const reg = getLocalCouriersRegistry();
+  if(reg[email]){
+    const cDigits = String(reg[email].cedula || '').replace(/\D/g, '');
+    const pDigits = String(reg[email].phone || '').replace(/\D/g, '');
+    if(inputDigits && (inputDigits === cDigits || inputDigits === pDigits)){
+      reg[email].password = new_password;
+      localStorage.setItem(LOCAL_COURIERS_KEY, JSON.stringify(reg));
+      updatedLocal = true;
+    }
+  }
+  try{
+    const res = await fetch(`${API_URL}/auth/courier/reset-password`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, verification, new_password})
+    });
+    if(!res.ok && !updatedLocal){
+      const err = await res.json().catch(() => ({}));
+      msg.textContent = err.detail || 'No coincidieron el correo y la cédula/teléfono registrado.';
+      return;
+    }
+  }catch(_e){
+    if(!updatedLocal){
+      msg.textContent = 'No se pudo verificar la cuenta. Revisa tu conexión.';
+      return;
+    }
+  }
+  msg.style.color = 'var(--green)';
+  msg.textContent = '¡Contraseña restablecida! Ya puedes iniciar sesión con tu nueva clave.';
+  document.getElementById('auth-email').value = email;
+  document.getElementById('auth-password').value = new_password;
+  setTimeout(() => closeCourierResetModal(), 1200);
 }
 
 async function submitAuth(){
