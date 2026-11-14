@@ -8,17 +8,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#1B2A41;
-    --navy-light:#28405e;
-    --cream:#F7F5F0;
+    --navy:#1E3A8A;
+    --navy-light:#2563EB;
+    --blue-soft:#EFF6FF;
+    --cream:#F4F7FB;
     --paper:#FFFFFF;
-    --amber:#E0A458;
-    --amber-dark:#C4863C;
-    --green:#3F6C51;
-    --red:#B14A42;
-    --ink:#1B2A41;
-    --muted:#6B7280;
-    --line:#E4E0D6;
+    --amber:#2563EB;
+    --amber-dark:#1D4ED8;
+    --green:#1D4ED8;
+    --red:#DC2626;
+    --ink:#0F172A;
+    --muted:#64748B;
+    --line:#E2E8F0;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink);}
@@ -26,119 +27,147 @@
   .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
 
   /* ---------- Login ---------- */
-  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:16px;}
-  .login-card{background:var(--paper);padding:clamp(24px,5vw,44px) clamp(20px,5vw,38px);border-radius:10px;width:min(400px,100%);box-shadow:0 20px 60px rgba(0,0,0,.35);}
-  .login-card h1{font-size:22px;color:var(--navy);margin-bottom:4px;}
-  .login-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-dark);margin-bottom:14px;display:block;}
-  .field{margin-bottom:16px;}
-  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:500;}
-  .field input, .field select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:5px;font-size:15px;font-family:inherit;background:var(--cream);}
-  .field input:focus, .field select:focus{outline:none;border-color:var(--navy);}
-  button.primary{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;}
-  button.primary:hover{background:var(--navy-light);}
-  button.secondary-login{width:100%;padding:11px 12px;margin-top:10px;background:transparent;color:var(--navy);border:1.5px solid var(--line);border-radius:5px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
-  button.secondary-login:hover{background:var(--cream);border-color:var(--amber-dark);}
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0F2942 0%,#1E3A8A 55%,#2563EB 100%);padding:16px;}
+  .login-card{background:var(--paper);padding:clamp(24px,5vw,40px) clamp(20px,5vw,36px);border-radius:20px;width:min(410px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .login-card h1{font-size:24px;color:var(--ink);margin-bottom:4px;}
+  .login-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy-light);font-weight:700;margin-bottom:10px;display:block;}
+  .field{margin-bottom:15px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;}
+  .field input, .field select{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#F8FAFC;color:var(--ink);}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--navy-light);background:var(--paper);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+  button.primary{width:100%;padding:12px;background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.01em;box-shadow:0 6px 16px rgba(37,99,235,.25);}
+  button.primary:hover{background:var(--navy);}
+  button.secondary-login{width:100%;padding:11px 12px;margin-top:10px;background:var(--blue-soft);color:var(--navy);border:1px solid #BFDBFE;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  button.secondary-login:hover{background:#DBEAFE;}
   .toggle-mode{text-align:center;margin-top:16px;font-size:13px;color:var(--muted);}
-  .toggle-mode a{color:var(--amber-dark);cursor:pointer;text-decoration:none;font-weight:600;}
+  .toggle-mode a{color:var(--navy-light);cursor:pointer;text-decoration:none;font-weight:700;}
   .error-msg{color:var(--red);font-size:13px;margin-top:10px;display:none;}
   .api-config{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);}
   .api-config input{font-size:11px;color:var(--muted);}
 
   /* ---------- App shell ---------- */
   #app{display:none;min-height:100vh;}
-  .sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--navy);color:#fff;padding:28px 0;display:flex;flex-direction:column;}
-  .sidebar .brand{padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px;}
-  .sidebar .brand .store-name{font-family:'Sora',sans-serif;font-weight:600;font-size:16px;}
-  .sidebar .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);opacity:.9;}
-  .nav-item{padding:13px 24px;font-size:14px;cursor:pointer;color:rgba(255,255,255,.75);border-left:3px solid transparent;user-select:none;}
-  .nav-item:hover{color:#fff;}
-  .nav-item.active{color:#fff;border-left-color:var(--amber);background:rgba(255,255,255,.05);font-weight:600;}
-  .nav-item.logout{margin-top:auto;color:rgba(255,255,255,.65);}
-  main{margin-left:220px;padding:36px 44px;max-width:1060px;}
-  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;gap:12px;}
-  .page-header h2{font-size:24px;}
-  .page-header .sub{color:var(--muted);font-size:13px;margin-top:4px;}
-  .btn{padding:10px 18px;background:var(--amber);color:var(--navy);border:none;border-radius:5px;font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
-  .btn:hover{background:var(--amber-dark);}
-  .btn.secondary{background:transparent;border:1.5px solid var(--line);color:var(--ink);}
-  .btn.small{padding:7px 12px;font-size:12px;}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:230px;background:linear-gradient(180deg,#0F2942 0%,#1E3A8A 100%);color:#fff;padding:26px 0;display:flex;flex-direction:column;box-shadow:4px 0 20px rgba(15,23,42,.08);}
+  .sidebar .brand{padding:0 22px 22px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:10px;}
+  .sidebar .brand .store-name{font-family:'Sora',sans-serif;font-weight:700;font-size:16px;margin-top:3px;}
+  .sidebar .brand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#93C5FD;font-weight:700;}
+  .nav-item{padding:12px 22px;font-size:14px;cursor:pointer;color:rgba(255,255,255,.78);border-left:3px solid transparent;user-select:none;transition:all .15s;}
+  .nav-item:hover{color:#fff;background:rgba(255,255,255,.06);}
+  .nav-item.active{color:#fff;border-left-color:#60A5FA;background:rgba(37,99,235,.32);font-weight:700;}
+  .nav-item.logout{margin-top:auto;color:rgba(255,255,255,.72);}
+  main{margin-left:230px;padding:28px 38px 60px;max-width:1100px;}
 
-  table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);}
-  th{text-align:left;padding:12px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:2px solid var(--line);font-weight:600;}
+  /* Atajos circulares y Banner estilo SportyMart en Tienda */
+  .store-shortcuts-wrap{margin-bottom:16px;}
+  .store-shortcuts-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 2px 8px;}
+  .store-shortcuts-row{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 6px;}
+  .store-shortcuts-row::-webkit-scrollbar{display:none;}
+  .store-shortcut{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;min-width:66px;font-family:inherit;color:var(--ink);}
+  .store-shortcut .sc-circle{width:56px;height:56px;border-radius:50%;background:var(--paper);border:1.5px solid var(--line);display:grid;place-items:center;font-size:22px;box-shadow:0 3px 10px rgba(15,23,42,.05);transition:all .18s;position:relative;}
+  .store-shortcut:hover .sc-circle,.store-shortcut.active .sc-circle{background:linear-gradient(135deg,#1E3A8A,#2563EB);border-color:#1E3A8A;color:#fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(37,99,235,.28);}
+  .store-shortcut .sc-label{font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;}
+  .store-shortcut.active .sc-label{color:var(--navy);font-weight:700;}
+
+  .store-hero-banner{background:linear-gradient(135deg,#0F2942 0%,#1E3A8A 55%,#2563EB 100%);border-radius:20px;padding:18px 22px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:22px;box-shadow:0 10px 26px rgba(30,58,138,.2);position:relative;overflow:hidden;}
+  .store-hero-banner::after{content:'';position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none;}
+  .store-hero-text{z-index:1;max-width:70%;}
+  .store-hero-text h3{font-size:19px;font-weight:700;margin:0 0 5px;}
+  .store-hero-text p{font-size:12px;color:rgba(255,255,255,.85);margin:0 0 12px;line-height:1.4;}
+  .store-hero-btns{display:flex;flex-wrap:wrap;gap:8px;}
+  .store-hero-btn{background:#fff;color:var(--navy);border:none;padding:8px 15px;border-radius:999px;font-weight:700;font-size:12px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.12);}
+  .store-hero-btn.outline{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
+  .store-hero-badge{z-index:1;text-align:right;font-family:'Sora',sans-serif;font-weight:800;font-size:13px;line-height:1.25;letter-spacing:.04em;color:rgba(255,255,255,.92);text-transform:uppercase;}
+
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:12px;}
+  .page-header h2{font-size:22px;color:var(--ink);}
+  .page-header .sub{color:var(--muted);font-size:13px;margin-top:4px;}
+  .btn{padding:10px 18px;background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;border:none;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 4px 12px rgba(37,99,235,.22);transition:all .15s;}
+  .btn:hover{background:var(--navy);transform:translateY(-1px);}
+  .btn.secondary{background:var(--paper);border:1.5px solid var(--line);color:var(--navy);box-shadow:none;}
+  .btn.secondary:hover{background:var(--blue-soft);border-color:#93C5FD;}
+  .btn.small{padding:7px 14px;font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 4px 14px rgba(15,23,42,.04);}
+  th{text-align:left;padding:13px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:#F8FAFC;border-bottom:1.5px solid var(--line);font-weight:700;}
   td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
   .stock-tag{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;}
   .stock-dot{width:7px;height:7px;border-radius:50%;}
-  .stock-ok .stock-dot{background:var(--green);} .stock-ok{color:var(--green);}
-  .stock-low .stock-dot{background:var(--amber-dark);} .stock-low{color:var(--amber-dark);}
+  .stock-ok .stock-dot{background:#0284C7;} .stock-ok{color:#0284C7;}
+  .stock-low .stock-dot{background:#D97706;} .stock-low{color:#D97706;}
   .stock-out .stock-dot{background:var(--red);} .stock-out{color:var(--red);}
 
-  .status-pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
-  .status-pendiente{background:#FDF0DD;color:var(--amber-dark);}
-  .status-confirmado{background:#E4EEE8;color:var(--green);}
-  .status-en_camino{background:#E4EEF6;color:#2E5F8A;}
-  .status-entregado{background:#E7F4E9;color:var(--green);}
-  .status-cancelado{background:#FBEAE9;color:var(--red);}
+  .status-pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pendiente{background:#FEF3C7;color:#B45309;}
+  .status-confirmado{background:var(--blue-soft);color:var(--navy-light);}
+  .status-en_camino{background:#E0F2FE;color:#0369A1;}
+  .status-entregado{background:#DCFCE7;color:#15803D;}
+  .status-cancelado{background:#FEE2E2;color:var(--red);}
 
-  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(27,42,65,.55);align-items:center;justify-content:center;z-index:50;padding:14px;}
-  .modal{background:var(--paper);padding:28px 24px;border-radius:10px;width:min(460px,100%);max-height:calc(100vh - 28px);overflow-y:auto;}
-  .modal h3{margin-bottom:18px;font-size:17px;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);align-items:center;justify-content:center;z-index:50;padding:14px;}
+  .modal{background:var(--paper);padding:28px 24px;border-radius:20px;width:min(460px,100%);max-height:calc(100vh - 28px);overflow-y:auto;box-shadow:0 20px 50px rgba(15,23,42,.25);}
+  .modal h3{margin-bottom:18px;font-size:17px;color:var(--ink);}
   .modal-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .profit-preview-box{background:var(--cream);border:1.5px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:13px;}
-  .profit-preview-box.positive{background:#EEF6F0;border-color:var(--green);}
-  .profit-preview-box.negative{background:#FBEAE9;border-color:var(--red);}
+  .profit-preview-box{background:var(--cream);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;}
+  .profit-preview-box.positive{background:var(--blue-soft);border-color:#93C5FD;}
+  .profit-preview-box.negative{background:#FEE2E2;border-color:#FCA5A5;}
   .profit-preview-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0;}
   .profit-preview-row strong{font-family:'IBM Plex Mono',monospace;}
-  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:24px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px;}
   .summary-grid.four-cols{grid-template-columns:repeat(4,minmax(0,1fr));}
-  .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px 18px;}
-  .summary-card .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+  .summary-card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 3px 10px rgba(15,23,42,.03);}
+  .summary-card .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
   .summary-card .value{font:700 22px 'IBM Plex Mono',monospace;color:var(--ink);margin-top:8px;word-break:break-word;}
-  .summary-card.warning .value{color:var(--amber-dark);}
-  .inventory-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;}
-  .inventory-toolbar input{width:260px;padding:10px 12px;border:1px solid var(--line);border-radius:5px;background:var(--paper);font:14px 'Inter',sans-serif;}
-  .inventory-toolbar input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
-  .sale-card{width:100%;max-width:480px;padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:8px;}
+  .summary-card.warning .value{color:#D97706;}
+  .inventory-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;}
+  .inventory-toolbar input{width:300px;padding:11px 16px;border:1.5px solid var(--line);border-radius:999px;background:var(--paper);font:14px 'Inter',sans-serif;color:var(--ink);box-shadow:0 2px 8px rgba(15,23,42,.04);}
+  .inventory-toolbar input:focus{outline:none;border-color:var(--navy-light);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+  .sale-card{width:100%;max-width:500px;padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 4px 14px rgba(15,23,42,.04);}
   .sale-search{position:relative;}
-  .sale-search input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:5px;background:var(--paper);font:15px 'Inter',sans-serif;}
-  .sale-search input:focus{outline:2px solid rgba(224,164,88,.35);border-color:var(--amber-dark);}
-  .sale-suggestions{position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--paper);border:1px solid var(--line);box-shadow:0 8px 20px rgba(27,42,65,.12);max-height:240px;overflow-y:auto;}
+  .sale-search input{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:#F8FAFC;font:15px 'Inter',sans-serif;}
+  .sale-search input:focus{outline:none;border-color:var(--navy-light);background:var(--paper);}
+  .sale-suggestions{position:absolute;top:100%;left:0;right:0;z-index:5;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 20px rgba(15,23,42,.12);max-height:240px;overflow-y:auto;}
   .sale-suggestion{padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:12px;font-size:13px;}
-  .sale-suggestion:hover{background:var(--cream);}
+  .sale-suggestion:hover{background:var(--blue-soft);}
   .sale-suggestion small{color:var(--muted);}
-  .sale-selected{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;background:var(--cream);font-size:13px;border-radius:6px;}
-  .sale-unit{color:var(--green);font-weight:700;}
+  .sale-selected{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;background:var(--blue-soft);font-size:13px;border-radius:10px;}
+  .sale-unit{color:var(--navy-light);font-weight:700;}
   .sale-quantity-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:end;}
-  .profile-card{max-width:620px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:24px;}
+  .profile-card{max-width:640px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 4px 14px rgba(15,23,42,.04);}
   .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
   .profile-grid .field:first-child{grid-column:1/-1;}
   .checkbox-field{display:flex;align-items:center;gap:8px;margin:4px 0 20px;font-size:13px;color:var(--ink);}
-  .checkbox-field input{width:16px;height:16px;accent-color:var(--green);}
+  .checkbox-field input{width:16px;height:16px;accent-color:var(--navy-light);}
+
+  .store-bottom-nav{display:none;}
   @media(max-width:768px){
     .sidebar{
       position:sticky;top:0;left:0;right:0;bottom:auto;width:100%;z-index:30;
       display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;
-      padding:10px 12px;gap:6px;
-      box-shadow:0 4px 12px rgba(0,0,0,.15);
+      padding:10px 14px;gap:6px;background:var(--paper);color:var(--ink);
+      border-bottom:1px solid var(--line);box-shadow:0 4px 14px rgba(15,23,42,.05);
     }
     .sidebar .brand{
       width:100%;display:flex;align-items:center;justify-content:space-between;
-      padding:0 4px 8px;border-bottom:1px solid rgba(255,255,255,.15);
-      margin:0 0 2px;
+      padding:0 2px 8px;border-bottom:1px solid var(--line);
+      margin:0 0 4px;
     }
-    .sidebar .brand .eyebrow{font-size:9px;margin:0;}
-    .sidebar .brand .store-name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sidebar .brand .eyebrow{font-size:9px;margin:0;color:var(--navy-light);}
+    .sidebar .brand .store-name{font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .nav-item{
-      flex:1 1 auto;text-align:center;padding:8px 11px;font-size:12.5px;border-left:none;
-      border-radius:999px;white-space:nowrap;background:rgba(255,255,255,.08);color:rgba(255,255,255,.9);
+      flex:1 1 auto;text-align:center;padding:7px 11px;font-size:12px;border-left:none;
+      border-radius:999px;white-space:nowrap;background:#F1F5F9;color:var(--ink);font-weight:600;
     }
-    .nav-item.active{background:var(--amber);color:var(--navy);border-left:none;font-weight:700;}
+    .nav-item:hover{color:var(--navy-light);background:var(--blue-soft);}
+    .nav-item.active{background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;border-left:none;font-weight:700;}
     .nav-item.logout{
-      position:static;bottom:auto;width:auto;margin-top:0;padding:8px 11px;
-      background:rgba(177,74,66,.28);border:1px solid rgba(255,255,255,.22);color:#fff;
+      position:static;bottom:auto;width:auto;margin-top:0;padding:7px 11px;
+      background:#FEE2E2;border:1px solid #FECACA;color:var(--red);
     }
-    main{margin-left:0;padding:18px 12px 36px;max-width:100%;}
-    .page-header{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:18px;}
+    main{margin-left:0;padding:16px 12px 92px;max-width:100%;}
+    .store-hero-text{max-width:74%;}
+    .store-hero-text h3{font-size:16px;}
+    .page-header{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:16px;}
     .page-header h2{font-size:20px;}
     .page-header .btn{width:100%;text-align:center;}
     .summary-grid,.summary-grid.four-cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
@@ -148,13 +177,19 @@
     .inventory-toolbar input{width:100%;}
     .sale-card,.profile-card{padding:16px;}
 
+    /* Barra inferior fija en móvil estilo SportyMart */
+    .store-bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(15,23,42,.06);display:flex;justify-content:space-around;align-items:center;padding:8px 4px calc(8px + env(safe-area-inset-bottom, 0px));z-index:35;}
+    .store-bnav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font:600 10.5px 'Inter',sans-serif;cursor:pointer;padding:3px 2px;position:relative;}
+    .store-bnav-btn .sb-icon{font-size:19px;line-height:1;}
+    .store-bnav-btn.active{color:var(--navy-light);font-weight:700;}
+
     /* Tablas adaptables a tarjetas en celular */
-    table{display:block;background:transparent;box-shadow:none;border-radius:0;overflow:visible;}
+    table{display:block;background:transparent;box-shadow:none;border-radius:0;border:none;overflow:visible;}
     thead{display:none;}
     tbody{display:flex;flex-direction:column;gap:12px;}
     tbody tr{
       display:block;background:var(--paper);border:1px solid var(--line);
-      border-radius:10px;padding:12px 14px;box-shadow:0 2px 6px rgba(0,0,0,.05);
+      border-radius:16px;padding:12px 14px;box-shadow:0 3px 10px rgba(15,23,42,.04);
     }
     tbody td{
       display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
@@ -178,18 +213,18 @@
     .modal{width:100%;padding:20px 16px;max-height:none;margin:auto 0;}
   }
   .empty-state{text-align:center;padding:44px 16px;color:var(--muted);}
-  .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber-dark);}
+  .empty-state .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-light);font-weight:700;}
   .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--red);color:#fff;font:700 11px 'IBM Plex Mono',monospace;vertical-align:middle;}
   #order-toast-container{position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:10px;width:min(380px,calc(100vw - 24px));pointer-events:none;}
-  .order-toast{pointer-events:auto;background:var(--navy);color:#fff;border:2px solid var(--amber);border-radius:12px;padding:14px 16px;box-shadow:0 14px 36px rgba(0,0,0,.35);animation:toastSlideIn .28s ease-out;}
+  .order-toast{pointer-events:auto;background:linear-gradient(135deg,#0F2942,#1E3A8A);color:#fff;border:2px solid #60A5FA;border-radius:16px;padding:14px 16px;box-shadow:0 14px 36px rgba(15,23,42,.35);animation:toastSlideIn .28s ease-out;}
   @keyframes toastSlideIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
   .order-toast-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
-  .order-toast-title{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--amber);}
+  .order-toast-title{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:#93C5FD;}
   .order-toast-body{font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.92);margin-bottom:10px;}
   .order-toast-actions{display:flex;gap:8px;}
-  .order-toast-actions button{flex:1;padding:8px 10px;border-radius:6px;border:0;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
-  .order-toast-actions .view-btn{background:var(--amber);color:var(--navy);}
-  .order-toast-actions .dismiss-btn{background:rgba(255,255,255,.14);color:#fff;}
+  .order-toast-actions button{flex:1;padding:8px 10px;border-radius:999px;border:0;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .order-toast-actions .view-btn{background:#fff;color:var(--navy);}
+  .order-toast-actions .dismiss-btn{background:rgba(255,255,255,.16);color:#fff;}
 </style>
 </head>
 <body>
@@ -281,6 +316,64 @@
   </div>
 
   <main>
+    <!-- Atajos Rápidos Circulares estilo SportyMart -->
+    <div class="store-shortcuts-wrap">
+      <div class="store-shortcuts-title">Accesos rápidos de tu tienda</div>
+      <div class="store-shortcuts-row">
+        <button type="button" class="store-shortcut" onclick="openInventoryModal()">
+          <span class="sc-circle" style="background:var(--blue-soft);border-color:#93C5FD;color:var(--navy-light);">➕</span>
+          <span class="sc-label">+ Producto</span>
+        </button>
+        <button type="button" class="store-shortcut active" data-shortcut="inventory" onclick="switchView('inventory')">
+          <span class="sc-circle">📦</span>
+          <span class="sc-label">Inventario</span>
+        </button>
+        <button type="button" class="store-shortcut" data-shortcut="orders" onclick="switchView('orders')">
+          <span class="sc-circle">🧾</span>
+          <span class="sc-label">Pedidos</span>
+        </button>
+        <button type="button" class="store-shortcut" data-shortcut="sales" onclick="switchView('sales')">
+          <span class="sc-circle">💵</span>
+          <span class="sc-label">Vender</span>
+        </button>
+        <button type="button" class="store-shortcut" data-shortcut="profits" onclick="switchView('profits')">
+          <span class="sc-circle">📈</span>
+          <span class="sc-label">Ganancias</span>
+        </button>
+        <button type="button" class="store-shortcut" data-shortcut="suppliers" onclick="switchView('suppliers')">
+          <span class="sc-circle">🚚</span>
+          <span class="sc-label">Proveedores</span>
+        </button>
+        <button type="button" class="store-shortcut" data-shortcut="profile" onclick="switchView('profile')">
+          <span class="sc-circle">🏪</span>
+          <span class="sc-label">Mi tienda</span>
+        </button>
+        <button type="button" class="store-shortcut" onclick="goHomeProfiles()">
+          <span class="sc-circle">🔄</span>
+          <span class="sc-label">Perfiles</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner Principal Azul-Blanco de Tienda -->
+    <div class="store-hero-banner">
+      <div class="store-hero-text">
+        <h3 id="hero-store-name">Tu Tienda en Venta Fast</h3>
+        <p>Controla tus productos, recibe pedidos con alerta en tiempo real y consulta tus ganancias al instante.</p>
+        <div class="store-hero-btns">
+          <button type="button" class="store-hero-btn" onclick="openInventoryModal()">+ Agregar producto</button>
+          <button type="button" class="store-hero-btn outline" onclick="switchView('orders')">Ver pedidos</button>
+          <button type="button" class="store-hero-btn outline" onclick="switchView('sales')">Registrar venta</button>
+        </div>
+      </div>
+      <div class="store-hero-badge">
+        <div style="font-size:32px;margin-bottom:4px;">🏪</div>
+        <div>VENDE</div>
+        <div>GESTIONA</div>
+        <div>CRECE</div>
+      </div>
+    </div>
+
     <!-- Vista Inventario -->
     <section id="view-inventory">
       <div class="page-header">
@@ -431,6 +524,30 @@
       </div>
     </section>
   </main>
+
+  <!-- Barra de Navegación Inferior Fija en Móvil estilo SportyMart -->
+  <nav class="store-bottom-nav" aria-label="Navegación rápida de tienda">
+    <button type="button" class="store-bnav-btn active" data-bnav="inventory" onclick="switchView('inventory')">
+      <span class="sb-icon">📦</span>
+      <span>Inventario</span>
+    </button>
+    <button type="button" class="store-bnav-btn" data-bnav="orders" onclick="switchView('orders')">
+      <span class="sb-icon">🧾</span>
+      <span>Pedidos</span>
+    </button>
+    <button type="button" class="store-bnav-btn" data-bnav="sales" onclick="switchView('sales')">
+      <span class="sb-icon">💵</span>
+      <span>Vender</span>
+    </button>
+    <button type="button" class="store-bnav-btn" data-bnav="profits" onclick="switchView('profits')">
+      <span class="sb-icon">📈</span>
+      <span>Ganancias</span>
+    </button>
+    <button type="button" class="store-bnav-btn" data-bnav="profile" onclick="switchView('profile')">
+      <span class="sb-icon">🏪</span>
+      <span>Mi tienda</span>
+    </button>
+  </nav>
 </div>
 
 <!-- ============ MODAL: agregar/editar inventario ============ -->
@@ -868,6 +985,8 @@ function enterApp(initialView){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('sidebar-store-name').textContent = STORE.name;
+  const heroName = document.getElementById('hero-store-name');
+  if(heroName) heroName.textContent = STORE.name;
   loadSuppliers();
   loadInventory();
   loadStoreSummary();
@@ -1037,6 +1156,8 @@ function logout(){
 function switchView(view){
   try{ localStorage.setItem('store_active_view', view); }catch(_e){}
   document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  document.querySelectorAll('.store-shortcut[data-shortcut]').forEach(el => el.classList.toggle('active', el.dataset.shortcut === view));
+  document.querySelectorAll('.store-bnav-btn[data-bnav]').forEach(el => el.classList.toggle('active', el.dataset.bnav === view));
   document.getElementById('view-inventory').style.display = view === 'inventory' ? 'block' : 'none';
   document.getElementById('view-orders').style.display = view === 'orders' ? 'block' : 'none';
   document.getElementById('view-sales').style.display = view === 'sales' ? 'block' : 'none';
