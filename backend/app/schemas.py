@@ -33,9 +33,15 @@ class StoreOut(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     offers_delivery: bool = True
+    approval_status: str = "aprobado"
+    approved: bool = True
 
     class Config:
         from_attributes = True
+
+
+class StoreApprovalUpdate(BaseModel):
+    status: str  # "aprobado" | "rechazado" | "pendiente"
 
 
 class StoreLogin(BaseModel):

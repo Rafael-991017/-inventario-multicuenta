@@ -10,9 +10,12 @@ router = APIRouter(prefix="/stores", tags=["Tiendas"])
 
 @router.get("", response_model=List[schemas.StoreOut])
 def list_stores(db=Depends(get_db)):
-    """Lista pública de tiendas, para que la app del cliente pueda mostrarlas
+    """Lista pública de tiendas aprobadas, para que la app del cliente pueda mostrarlas
     en un mapa o listado."""
-    return list(list_collection("stores"))
+    return [
+        s for s in list_collection("stores")
+        if (s.get("approval_status") or ("aprobado" if s.get("approved", True) else "pendiente")) == "aprobado"
+    ]
 
 
 @router.get("/me", response_model=schemas.StoreOut)

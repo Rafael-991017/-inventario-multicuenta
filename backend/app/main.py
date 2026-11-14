@@ -18,7 +18,7 @@ app = FastAPI(
         "pedidos a domicilio, y consulta de disponibilidad de productos "
         "entre tiendas."
     ),
-    version="1.0.6",
+    version="1.0.7",
 )
 
 # Permite que cualquier navegador (PC, celular, GitHub Pages, Render, Android) se conecte a la API.

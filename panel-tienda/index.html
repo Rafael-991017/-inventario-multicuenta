@@ -688,25 +688,59 @@ function ensureStorePrivacyAccepted(){
   return true;
 }
 
+const LOCAL_STORES_APPROVAL_KEY = 'inventario_stores_registry';
+function getLocalStoresRegistry(){
+  try{ return JSON.parse(localStorage.getItem(LOCAL_STORES_APPROVAL_KEY) || '{}'); }catch(_e){ return {}; }
+}
+function saveLocalStoresRegistry(reg){
+  try{ localStorage.setItem(LOCAL_STORES_APPROVAL_KEY, JSON.stringify(reg)); }catch(_e){}
+}
+
 async function register(){
   if(!ensureStorePrivacyAccepted()) return;
   const body = {
-    name: document.getElementById('reg-name').value,
-    email: document.getElementById('reg-email').value,
+    name: document.getElementById('reg-name').value.trim(),
+    email: document.getElementById('reg-email').value.trim().toLowerCase(),
     password: document.getElementById('reg-password').value,
-    address: document.getElementById('reg-address').value,
-    neighborhood: document.getElementById('reg-neighborhood').value,
-    municipality: document.getElementById('reg-municipality').value,
-    department: document.getElementById('reg-department').value,
-    phone: document.getElementById('reg-phone').value,
+    address: document.getElementById('reg-address').value.trim(),
+    neighborhood: document.getElementById('reg-neighborhood').value.trim(),
+    municipality: document.getElementById('reg-municipality').value.trim(),
+    department: document.getElementById('reg-department').value.trim(),
+    phone: document.getElementById('reg-phone').value.trim(),
   };
+  if(!body.name || !body.email || !body.password){
+    showError('Completa el nombre de la tienda, el correo y la contraseña.');
+    return;
+  }
   try{
     const res = await fetch(`${API_URL}/auth/register`, {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
     });
     if(!res.ok){ const err = await res.json(); throw new Error(err.detail || 'Error al registrar'); }
-    await doLogin(body.email, body.password);
-  }catch(e){ showError(e.message); }
+    const createdStore = await res.json();
+    const reg = getLocalStoresRegistry();
+    reg[body.email] = {
+      ...createdStore,
+      email: body.email,
+      approval_status: 'pendiente',
+      approved: false
+    };
+    saveLocalStoresRegistry(reg);
+    document.getElementById('login-email').value = body.email;
+    document.getElementById('login-password').value = '';
+    if(document.getElementById('register-form').style.display !== 'none'){
+      toggleMode();
+    }
+    const errEl = document.getElementById('error-msg');
+    errEl.style.color = 'var(--navy-light)';
+    errEl.style.fontWeight = '600';
+    errEl.textContent = '✅ Solicitud enviada: Tu tienda quedó pendiente de revisión y aprobación por el administrador. Cuando el administrador la acepte, podrás iniciar sesión.';
+    errEl.style.display = 'block';
+  }catch(e){
+    const errEl = document.getElementById('error-msg');
+    if(errEl) errEl.style.color = 'var(--red)';
+    showError(e.message);
+  }
 }
 
 async function resolveStoreEmail(identifier){

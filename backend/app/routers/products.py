@@ -33,7 +33,11 @@ def list_catalog_with_availability(
         product for product in list_collection("products")
         if (not category or product.get("category") == category)
     ]
-    stores = {store["id"]: store for store in list_collection("stores")}
+    stores = {
+        store["id"]: store
+        for store in list_collection("stores")
+        if (store.get("approval_status") or ("aprobado" if store.get("approved", True) else "pendiente")) == "aprobado"
+    }
     avail_by_product = {}
 
     for item in list_collection("inventory"):
@@ -163,7 +167,11 @@ def product_availability(
 ):
     """El endpoint clave para la app del cliente: en qué tiendas hay este
     producto disponible, con precio y stock de cada una."""
-    stores = {store["id"]: store for store in list_collection("stores")}
+    stores = {
+        store["id"]: store
+        for store in list_collection("stores")
+        if (store.get("approval_status") or ("aprobado" if store.get("approved", True) else "pendiente")) == "aprobado"
+    }
     results = []
     for item in list_collection("inventory"):
         if item.get("product_id") != product_id or item.get("stock", 0) <= 0:

@@ -66,6 +66,15 @@
   .pill-aprobado{background:#E4EEE8;color:var(--green)}
   .pill-rechazado{background:#F8E5E3;color:var(--red)}
   .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+  .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--red);color:#fff;font:700 11px 'IBM Plex Mono',monospace;vertical-align:middle;}
+  #admin-toast-container{position:fixed;top:16px;right:16px;z-index:10000;display:flex;flex-direction:column;gap:10px;width:min(390px,calc(100vw - 24px));pointer-events:none;}
+  .admin-toast{pointer-events:auto;background:var(--navy);color:#fff;border:2px solid var(--amber);border-radius:14px;padding:14px 16px;box-shadow:0 14px 36px rgba(0,0,0,.35);animation:adminToastIn .28s ease-out;}
+  @keyframes adminToastIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+  .admin-toast-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+  .admin-toast-title{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;color:var(--amber);}
+  .admin-toast-body{font-size:12.5px;line-height:1.45;color:rgba(255,255,255,.92);margin-bottom:10px;}
+  .admin-toast-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .admin-toast-actions button{flex:1;padding:8px 10px;border-radius:8px;border:0;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
 
   @media(max-width:768px){
     .sidebar{
@@ -135,16 +144,17 @@
   </div>
 </div>
 
+<div id="admin-toast-container"></div>
 <div id="admin-app">
   <div class="sidebar">
     <div class="brand">
       <span class="eyebrow">Panel Admin</span>
       <div class="title" id="admin-name-label">Administrador</div>
     </div>
-    <div class="nav-item active" data-tab="couriers" onclick="switchTab('couriers')">Domiciliarios</div>
-    <div class="nav-item" data-tab="stores" onclick="switchTab('stores')">Tiendas</div>
+    <div class="nav-item active" data-tab="couriers" onclick="switchTab('couriers')">Domiciliarios<span id="nav-couriers-badge" class="nav-badge" style="display:none;">0</span></div>
+    <div class="nav-item" data-tab="stores" onclick="switchTab('stores')">Tiendas<span id="nav-stores-badge" class="nav-badge" style="display:none;">0</span></div>
     <div class="nav-item" data-tab="customers" onclick="switchTab('customers')">Clientes</div>
-    <div class="nav-item" onclick="window.location.href='perfiles.html'">Perfiles</div>
+    <div class="nav-item" onclick="window.location.href='perfiles.html?switch=1'">Perfiles</div>
     <div class="nav-item logout" onclick="logoutAdmin()">Cerrar sesión</div>
   </div>
 
@@ -189,7 +199,7 @@
     <!-- Sección Tiendas -->
     <section id="tab-stores" style="display:none;">
       <div class="toolbar">
-        <strong>Todas las tiendas registradas</strong>
+        <strong>Solicitudes y cuentas de tiendas</strong>
         <input type="search" id="search-stores" placeholder="Buscar tienda por nombre, municipio o correo..." oninput="renderStores(this.value)">
       </div>
       <table>
@@ -197,10 +207,10 @@
           <tr>
             <th>ID</th>
             <th>Tienda</th>
-            <th>Correo</th>
-            <th>Teléfono</th>
+            <th>Correo / Teléfono</th>
             <th>Dirección / Ubicación</th>
             <th>Servicio domicilio</th>
+            <th>Estado de revisión</th>
             <th>Acciones del Admin</th>
           </tr>
         </thead>
@@ -272,6 +282,13 @@ function getLocalCouriersRegistry(){
 function saveLocalCouriersRegistry(reg){
   try{ localStorage.setItem(LOCAL_COURIERS_KEY, JSON.stringify(reg)); }catch(_e){}
 }
+const LOCAL_STORES_KEY = 'inventario_stores_registry';
+function getLocalStoresRegistry(){
+  try{ return JSON.parse(localStorage.getItem(LOCAL_STORES_KEY) || '{}'); }catch(_e){ return {}; }
+}
+function saveLocalStoresRegistry(reg){
+  try{ localStorage.setItem(LOCAL_STORES_KEY, JSON.stringify(reg)); }catch(_e){}
+}
 
 async function loginAdmin(){
   const email = document.getElementById('admin-email').value.trim().toLowerCase();
@@ -317,6 +334,11 @@ async function loginAdmin(){
   }
 }
 
+let adminPollTimer = null;
+let adminNotifiedStoreKeys = new Set();
+let adminNotifiedCourierKeys = new Set();
+let adminWatcherInitialized = false;
+
 function enterAdminApp(){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('admin-app').style.display = 'block';
@@ -324,9 +346,11 @@ function enterAdminApp(){
   const savedTab = localStorage.getItem('admin_active_tab') || 'couriers';
   switchTab(savedTab);
   loadAdminData();
+  startAdminRequestWatcher();
 }
 
 function logoutAdmin(){
+  stopAdminRequestWatcher();
   adminToken = null;
   adminProfile = null;
   localStorage.removeItem('admin_token');
@@ -345,12 +369,32 @@ function switchTab(tab){
 
   const titles = {
     couriers: ['Gestión de Domiciliarios', 'Revisa la Cédula de Ciudadanía y aprueba o rechaza las solicitudes de domiciliarios'],
-    stores: ['Tiendas Registradas', 'Listado completo de todas las tiendas activas en la plataforma'],
+    stores: ['Tiendas Registradas y Solicitudes', 'Aprueba o rechaza solicitudes de nuevas tiendas y administra las tiendas activas'],
     customers: ['Clientes Registrados', 'Listado de todos los clientes registrados en la aplicación']
   };
   if(titles[tab]){
     document.getElementById('tab-title').textContent = titles[tab][0];
     document.getElementById('tab-subtitle').textContent = titles[tab][1];
+  }
+}
+
+function updateAdminCountersAndBadges(){
+  const pendingCouriers = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+  const pendingStores = allStores.filter(s => (s.approval_status || 'aprobado') === 'pendiente').length;
+  document.getElementById('count-stores').textContent = allStores.length;
+  document.getElementById('count-customers').textContent = allCustomers.length;
+  document.getElementById('count-couriers').textContent = allCouriers.length;
+  document.getElementById('count-pending-couriers').textContent = pendingCouriers + pendingStores;
+
+  const courierBadge = document.getElementById('nav-couriers-badge');
+  if(courierBadge){
+    courierBadge.textContent = pendingCouriers;
+    courierBadge.style.display = pendingCouriers > 0 ? 'inline-block' : 'none';
+  }
+  const storeBadge = document.getElementById('nav-stores-badge');
+  if(storeBadge){
+    storeBadge.textContent = pendingStores;
+    storeBadge.style.display = pendingStores > 0 ? 'inline-block' : 'none';
   }
 }
 
@@ -379,8 +423,44 @@ async function loadAdminData(){
     }catch(_err){}
   }
 
-  // Combinar con registros locales de respaldo
-  allStores = apiStores;
+  // Combinar tiendas con registros locales de respaldo
+  const localStoresReg = getLocalStoresRegistry();
+  const storeMap = new Map();
+  apiStores.forEach(s => {
+    const k = (s.email || `id_${s.id}`).toLowerCase();
+    const local = localStoresReg[k] || {};
+    const status = s.approval_status || local.approval_status || (s.approved === false ? 'pendiente' : 'aprobado');
+    storeMap.set(k, {
+      ...s,
+      approval_status: status,
+      approved: status === 'aprobado'
+    });
+  });
+  Object.values(localStoresReg).forEach(s => {
+    const k = (s.email || '').toLowerCase();
+    if(k && !storeMap.has(k)){
+      const status = s.approval_status || 'pendiente';
+      storeMap.set(k, {
+        id: s.id || 0,
+        name: s.name || 'Tienda',
+        email: s.email,
+        phone: s.phone || '—',
+        address: s.address || '',
+        neighborhood: s.neighborhood || '',
+        municipality: s.municipality || '',
+        department: s.department || '',
+        offers_delivery: s.offers_delivery !== false,
+        approval_status: status,
+        approved: status === 'aprobado'
+      });
+    }
+  });
+  allStores = Array.from(storeMap.values()).sort((a, b) => {
+    const aPend = (a.approval_status === 'pendiente') ? 0 : 1;
+    const bPend = (b.approval_status === 'pendiente') ? 0 : 1;
+    if(aPend !== bPend) return aPend - bPend;
+    return (b.id || 0) - (a.id || 0);
+  });
 
   const localCustomers = JSON.parse(localStorage.getItem(LOCAL_CUSTOMERS_KEY) || '[]');
   const customerMap = new Map();
@@ -419,11 +499,17 @@ async function loadAdminData(){
   });
   allCouriers = Array.from(courierMap.values());
 
-  document.getElementById('count-stores').textContent = allStores.length;
-  document.getElementById('count-customers').textContent = allCustomers.length;
-  document.getElementById('count-couriers').textContent = allCouriers.length;
-  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+  if(!adminWatcherInitialized){
+    allStores.filter(s => s.approval_status === 'pendiente').forEach(s => {
+      adminNotifiedStoreKeys.add(String(s.id || s.email || '').toLowerCase());
+    });
+    allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').forEach(c => {
+      adminNotifiedCourierKeys.add(String(c.id || c.email || '').toLowerCase());
+    });
+    adminWatcherInitialized = true;
+  }
 
+  updateAdminCountersAndBadges();
   renderCouriers(document.getElementById('search-couriers').value);
   renderStores(document.getElementById('search-stores').value);
   renderCustomers(document.getElementById('search-customers').value);
@@ -496,14 +582,15 @@ async function deleteAccount(type, id, email, name){
     }catch(_e){}
     allCustomers = allCustomers.filter(c => c.id !== id && (c.email || '').toLowerCase() !== key);
   } else if(type === 'stores'){
+    const reg = getLocalStoresRegistry();
+    if(key && reg[key]){
+      delete reg[key];
+      saveLocalStoresRegistry(reg);
+    }
     allStores = allStores.filter(s => s.id !== id && (s.email || '').toLowerCase() !== key);
   }
 
-  document.getElementById('count-stores').textContent = allStores.length;
-  document.getElementById('count-customers').textContent = allCustomers.length;
-  document.getElementById('count-couriers').textContent = allCouriers.length;
-  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
-
+  updateAdminCountersAndBadges();
   renderCouriers(document.getElementById('search-couriers').value);
   renderStores(document.getElementById('search-stores').value);
   renderCustomers(document.getElementById('search-customers').value);
@@ -535,8 +622,36 @@ async function setCourierApproval(courierId, email, newStatus){
     }
     return c;
   });
-  document.getElementById('count-pending-couriers').textContent = allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').length;
+  updateAdminCountersAndBadges();
   renderCouriers(document.getElementById('search-couriers').value);
+}
+
+async function setStoreApproval(storeId, email, newStatus){
+  try{
+    await fetch(`${API_URL}/admin/stores/${storeId}/approval`, {
+      method:'PATCH',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({status: newStatus})
+    });
+  }catch(_e){}
+
+  const reg = getLocalStoresRegistry();
+  const key = (email || '').toLowerCase();
+  if(key){
+    reg[key] = {...(reg[key] || {}), email: key, approval_status: newStatus, approved: newStatus === 'aprobado'};
+    saveLocalStoresRegistry(reg);
+  }
+  allStores = allStores.map(s => {
+    if(s.id === storeId || (s.email || '').toLowerCase() === key){
+      return {...s, approval_status: newStatus, approved: newStatus === 'aprobado'};
+    }
+    return s;
+  });
+  updateAdminCountersAndBadges();
+  renderStores(document.getElementById('search-stores').value);
 }
 
 function renderStores(filter = ''){
@@ -550,13 +665,15 @@ function renderStores(filter = ''){
     (s.neighborhood || '').toLowerCase().includes(q)
   );
   if(filtered.length === 0){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No hay tiendas registradas.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">No hay tiendas registradas.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = filtered.map(s => {
     const loc = [s.address, s.neighborhood, s.municipality, s.department].filter(Boolean).join(', ') || 'Sin dirección';
     const safeEmail = (s.email || '').replace(/'/g, "\\'");
     const safeName = (s.name || '').replace(/'/g, "\\'");
+    const status = s.approval_status || (s.approved === false ? 'pendiente' : 'aprobado');
+    const statusLabel = status === 'aprobado' ? 'Aprobada' : (status === 'rechazado' ? 'Rechazada' : 'Pendiente de revisión');
     return `
       <tr>
         <td class="mono">#${s.id}</td>
@@ -565,7 +682,14 @@ function renderStores(filter = ''){
         <td class="mono">${s.phone || '—'}</td>
         <td>${loc}</td>
         <td>${s.offers_delivery !== false ? '<span class="pill pill-aprobado">Sí ofrece</span>' : '<span class="pill pill-pendiente">Solo tienda</span>'}</td>
-        <td><button class="btn reject" onclick="deleteAccount('stores', ${s.id || 0}, '${safeEmail}', '${safeName}')">🗑 Eliminar cuenta</button></td>
+        <td><span class="pill pill-${status}">${statusLabel}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${status !== 'aprobado' ? `<button class="btn approve" onclick="setStoreApproval(${s.id || 0}, '${safeEmail}', 'aprobado')">✓ Aprobar</button>` : ''}
+            ${status !== 'rechazado' ? `<button class="btn reject" onclick="setStoreApproval(${s.id || 0}, '${safeEmail}', 'rechazado')">✕ Rechazar</button>` : ''}
+            <button class="btn reject" onclick="deleteAccount('stores', ${s.id || 0}, '${safeEmail}', '${safeName}')">🗑 Eliminar cuenta</button>
+          </div>
+        </td>
       </tr>
     `;
   }).join('');
@@ -598,6 +722,129 @@ function renderCustomers(filter = ''){
       </tr>
     `;
   }).join('');
+}
+
+function playAdminAlertSound(){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [587.33, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.14);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + idx * 0.14 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.14 + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.14);
+      osc.stop(ctx.currentTime + idx * 0.14 + 0.26);
+    });
+  }catch(_e){}
+  try{
+    if(navigator.vibrate) navigator.vibrate([220, 100, 220]);
+  }catch(_e){}
+}
+
+function showAdminNotificationToast(type, item){
+  playAdminAlertSound();
+  const isStore = type === 'store';
+  const titleText = isStore
+    ? `🏪 Nueva solicitud de tienda: ${item.name}`
+    : `🛵 Nueva solicitud de domiciliario: ${item.name}`;
+  const bodyText = isStore
+    ? `${item.email || ''} · ${[item.neighborhood, item.municipality].filter(Boolean).join(', ') || 'Ubicación registrada'}`
+    : `CC ${item.cedula || 'Sin registrar'} · ${item.email || ''}`;
+
+  try{
+    if('Notification' in window && Notification.permission === 'granted'){
+      const n = new Notification(titleText, {
+        body: `${bodyText}. Haz clic para revisar y aprobar o rechazar.`,
+        tag: `admin-req-${type}-${item.id || item.email}`
+      });
+      n.onclick = () => {
+        window.focus();
+        switchTab(isStore ? 'stores' : 'couriers');
+        n.close();
+      };
+    }
+  }catch(_e){}
+
+  const container = document.getElementById('admin-toast-container');
+  if(!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'admin-toast';
+  const safeEmail = (item.email || '').replace(/'/g, "\\'");
+  const targetTab = isStore ? 'stores' : 'couriers';
+  const approveCall = isStore
+    ? `setStoreApproval(${item.id || 0}, '${safeEmail}', 'aprobado')`
+    : `setCourierApproval(${item.id || 0}, '${safeEmail}', 'aprobado')`;
+  const rejectCall = isStore
+    ? `setStoreApproval(${item.id || 0}, '${safeEmail}', 'rechazado')`
+    : `setCourierApproval(${item.id || 0}, '${safeEmail}', 'rechazado')`;
+
+  toast.innerHTML = `
+    <div class="admin-toast-header">
+      <div class="admin-toast-title">🔔 ${isStore ? 'SOLICITUD DE NUEVA TIENDA' : 'SOLICITUD DE DOMICILIARIO'}</div>
+      <button class="admin-toast-close" title="Cerrar">&times;</button>
+    </div>
+    <div class="admin-toast-body">
+      <strong>${item.name || 'Solicitante'}</strong> solicitó crear una cuenta.<br>
+      <span style="color:#94a3b8;font-size:12px;">${bodyText}</span>
+    </div>
+    <div class="admin-toast-actions">
+      <button class="btn approve" onclick="${approveCall}; this.closest('.admin-toast').remove();">✓ Aprobar</button>
+      <button class="btn reject" onclick="${rejectCall}; this.closest('.admin-toast').remove();">✕ Rechazar</button>
+      <button class="btn" onclick="switchTab('${targetTab}'); this.closest('.admin-toast').remove();">Ver solicitud</button>
+    </div>
+  `;
+  toast.querySelector('.admin-toast-close').onclick = () => toast.remove();
+  container.prepend(toast);
+  setTimeout(() => {
+    if(toast.parentNode) toast.remove();
+  }, 18000);
+}
+
+async function checkNewAdminRequestsInBackground(){
+  if(!adminToken) return;
+  const prevStoresPending = new Set(adminNotifiedStoreKeys);
+  const prevCouriersPending = new Set(adminNotifiedCourierKeys);
+  await loadAdminData();
+
+  allStores.filter(s => s.approval_status === 'pendiente').forEach(s => {
+    const key = String(s.id || s.email || '').toLowerCase();
+    if(key && !prevStoresPending.has(key)){
+      adminNotifiedStoreKeys.add(key);
+      showAdminNotificationToast('store', s);
+    }
+  });
+  allCouriers.filter(c => (c.approval_status || 'pendiente') === 'pendiente').forEach(c => {
+    const key = String(c.id || c.email || '').toLowerCase();
+    if(key && !prevCouriersPending.has(key)){
+      adminNotifiedCourierKeys.add(key);
+      showAdminNotificationToast('courier', c);
+    }
+  });
+}
+
+function startAdminRequestWatcher(){
+  stopAdminRequestWatcher();
+  try{
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission().catch(() => {});
+    }
+  }catch(_e){}
+  adminPollTimer = setInterval(checkNewAdminRequestsInBackground, 5000);
+}
+
+function stopAdminRequestWatcher(){
+  if(adminPollTimer){
+    clearInterval(adminPollTimer);
+    adminPollTimer = null;
+  }
 }
 
 if(adminToken && adminProfile){

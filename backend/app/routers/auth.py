@@ -41,6 +41,8 @@ def register_store(store_in: schemas.StoreCreate, db=Depends(get_db)):
         "latitude": store_in.latitude,
         "longitude": store_in.longitude,
         "offers_delivery": store_in.offers_delivery,
+        "approval_status": "pendiente",
+        "approved": False,
     }
     collection("stores").document(str(store["id"])).set(store)
     return store
@@ -54,6 +56,23 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos",
         )
+    approval_status = store.get("approval_status")
+    if not approval_status:
+        approval_status = "aprobado" if store.get("approved", True) else "pendiente"
+
+    if approval_status == "pendiente" or store.get("approved") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu solicitud de tienda está pendiente de revisión y aprobación por el administrador.",
+        )
+    if approval_status == "rechazado":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu solicitud para crear esta tienda fue rechazada por el administrador.",
+        )
+
+    store["approval_status"] = approval_status
+    store["approved"] = True
     token = auth.create_access_token({"sub": str(store["id"]), "role": "store"})
     return schemas.Token(access_token=token, store=store)
 
