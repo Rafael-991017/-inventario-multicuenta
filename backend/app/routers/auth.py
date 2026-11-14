@@ -1,21 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from .. import schemas, auth
-from ..database import collection, find_by_field, next_id, get_db
+from ..database import collection, find_by_field, list_collection, next_id, get_db
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
+def _find_user_case_insensitive(collection_name: str, identifier: str):
+    clean = (identifier or "").strip().lower()
+    if not clean:
+        return None
+    exact = find_by_field(collection_name, "email", clean) or find_by_field(collection_name, "email", (identifier or "").strip())
+    if exact:
+        return exact
+    for doc in list_collection(collection_name):
+        doc_email = str(doc.get("email") or "").strip().lower()
+        doc_name = str(doc.get("name") or "").strip().lower()
+        if doc_email == clean or doc_name == clean:
+            return doc
+    return None
+
+
 @router.post("/register", response_model=schemas.StoreOut, status_code=201)
 def register_store(store_in: schemas.StoreCreate, db=Depends(get_db)):
-    existing = find_by_field("stores", "email", store_in.email)
-    if existing:
+    normalized_email = str(store_in.email).strip().lower()
+    existing = _find_user_case_insensitive("stores", normalized_email)
+    if existing and str(existing.get("email") or "").strip().lower() == normalized_email:
         raise HTTPException(400, "Ya existe una tienda registrada con ese correo")
 
     store = {
         "id": next_id("stores"),
-        "name": store_in.name,
-        "email": str(store_in.email),
+        "name": store_in.name.strip(),
+        "email": normalized_email,
         "hashed_password": auth.hash_password(store_in.password),
         "address": store_in.address,
         "neighborhood": store_in.neighborhood,
@@ -32,7 +48,7 @@ def register_store(store_in: schemas.StoreCreate, db=Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    store = find_by_field("stores", "email", form_data.username)
+    store = _find_user_case_insensitive("stores", form_data.username)
     if not store or not auth.verify_password(form_data.password, store["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,7 +63,9 @@ def register_courier(courier_in: schemas.CourierCreate, db=Depends(get_db)):
     cedula_clean = "".join(ch for ch in (courier_in.cedula or "") if ch.isdigit())
     if not (6 <= len(cedula_clean) <= 11):
         raise HTTPException(400, "Ingresa una Cédula de Ciudadanía válida de Colombia (entre 6 y 11 dígitos)")
-    if find_by_field("couriers", "email", str(courier_in.email)):
+    email_norm = str(courier_in.email).strip().lower()
+    existing_courier = _find_user_case_insensitive("couriers", email_norm)
+    if existing_courier and str(existing_courier.get("email") or "").strip().lower() == email_norm:
         raise HTTPException(400, "Ya existe un domiciliario registrado con ese correo")
     if find_by_field("couriers", "cedula", cedula_clean):
         raise HTTPException(400, "Ya existe un domiciliario registrado con esa Cédula de Ciudadanía")
@@ -55,7 +73,7 @@ def register_courier(courier_in: schemas.CourierCreate, db=Depends(get_db)):
         "id": next_id("couriers"),
         "name": courier_in.name.strip(),
         "cedula": cedula_clean,
-        "email": str(courier_in.email).strip().lower(),
+        "email": email_norm,
         "hashed_password": auth.hash_password(courier_in.password),
         "phone": courier_in.phone.strip(),
         "vehicle_type": courier_in.vehicle_type,
@@ -69,8 +87,7 @@ def register_courier(courier_in: schemas.CourierCreate, db=Depends(get_db)):
 
 @router.post("/courier/login", response_model=schemas.CourierToken)
 def login_courier(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    email_clean = form_data.username.strip().lower()
-    courier = find_by_field("couriers", "email", email_clean) or find_by_field("couriers", "email", form_data.username.strip())
+    courier = _find_user_case_insensitive("couriers", form_data.username)
     if not courier or not auth.verify_password(form_data.password, courier["hashed_password"]):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
 
@@ -129,8 +146,7 @@ def register_customer(customer_in: schemas.CustomerCreate, db=Depends(get_db)):
 
 @router.post("/customer/login", response_model=schemas.CustomerToken)
 def login_customer(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    normalized_email = form_data.username.strip().lower()
-    customer = find_by_field("customers", "email", normalized_email) or find_by_field("customers", "email", form_data.username.strip())
+    customer = _find_user_case_insensitive("customers", form_data.username)
     if not customer or not auth.verify_password(form_data.password, customer["hashed_password"]):
         raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos")
     token = auth.create_access_token({"sub": str(customer["id"]), "role": "customer"})
@@ -148,10 +164,9 @@ def _digits_only(value: str) -> str:
 
 @router.post("/reset-password")
 def reset_store_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
-    email_clean = str(body.email).strip().lower()
-    store = find_by_field("stores", "email", email_clean) or find_by_field("stores", "email", str(body.email).strip())
+    store = _find_user_case_insensitive("stores", str(body.email))
     if not store:
-        raise HTTPException(404, "No se encontró ninguna tienda con ese correo")
+        raise HTTPException(404, "No se encontró ninguna tienda con ese correo o nombre")
     input_digits = _digits_only(body.verification)
     store_digits = _digits_only(store.get("phone") or "")
     if not input_digits or input_digits != store_digits:
@@ -165,8 +180,7 @@ def reset_store_password(body: schemas.PasswordResetRequest, db=Depends(get_db))
 
 @router.post("/customer/reset-password")
 def reset_customer_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
-    email_clean = str(body.email).strip().lower()
-    customer = find_by_field("customers", "email", email_clean) or find_by_field("customers", "email", str(body.email).strip())
+    customer = _find_user_case_insensitive("customers", str(body.email))
     if not customer:
         raise HTTPException(404, "No se encontró ningún cliente con ese correo")
     input_digits = _digits_only(body.verification)
@@ -182,8 +196,7 @@ def reset_customer_password(body: schemas.PasswordResetRequest, db=Depends(get_d
 
 @router.post("/courier/reset-password")
 def reset_courier_password(body: schemas.PasswordResetRequest, db=Depends(get_db)):
-    email_clean = str(body.email).strip().lower()
-    courier = find_by_field("couriers", "email", email_clean) or find_by_field("couriers", "email", str(body.email).strip())
+    courier = _find_user_case_insensitive("couriers", str(body.email))
     if not courier:
         raise HTTPException(404, "No se encontró ningún domiciliario con ese correo")
     input_digits = _digits_only(body.verification)

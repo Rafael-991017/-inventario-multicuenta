@@ -286,7 +286,7 @@ class OrderStatusUpdate(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    email: str
     verification: str
     new_password: str
 
