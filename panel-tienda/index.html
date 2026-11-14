@@ -143,27 +143,17 @@
   @media(max-width:768px){
     .sidebar{
       position:sticky;top:0;left:0;right:0;bottom:auto;width:100%;z-index:30;
-      display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;
-      padding:10px 14px;gap:6px;background:var(--paper);color:var(--ink);
+      display:flex;flex-direction:row;align-items:center;
+      padding:12px 16px;background:var(--paper);color:var(--ink);
       border-bottom:1px solid var(--line);box-shadow:0 4px 14px rgba(15,23,42,.05);
     }
     .sidebar .brand{
       width:100%;display:flex;align-items:center;justify-content:space-between;
-      padding:0 2px 8px;border-bottom:1px solid var(--line);
-      margin:0 0 4px;
+      padding:0;border-bottom:none;margin:0;
     }
-    .sidebar .brand .eyebrow{font-size:9px;margin:0;color:var(--navy-light);}
-    .sidebar .brand .store-name{font-size:16px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .nav-item{
-      flex:1 1 auto;text-align:center;padding:7px 11px;font-size:12px;border-left:none;
-      border-radius:999px;white-space:nowrap;background:#F1F5F9;color:var(--ink);font-weight:600;
-    }
-    .nav-item:hover{color:var(--navy-light);background:var(--blue-soft);}
-    .nav-item.active{background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;border-left:none;font-weight:700;}
-    .nav-item.logout{
-      position:static;bottom:auto;width:auto;margin-top:0;padding:7px 11px;
-      background:#FEE2E2;border:1px solid #FECACA;color:var(--red);
-    }
+    .sidebar .brand .eyebrow{font-size:10px;margin:0;color:var(--navy-light);}
+    .sidebar .brand .store-name{font-size:17px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .sidebar .nav-item{display:none !important;}
     main{margin-left:0;padding:16px 12px 92px;max-width:100%;}
     .store-hero-text{max-width:74%;}
     .store-hero-text h3{font-size:16px;}
@@ -329,7 +319,7 @@
           <span class="sc-label">Inventario</span>
         </button>
         <button type="button" class="store-shortcut" data-shortcut="orders" onclick="switchView('orders')">
-          <span class="sc-circle">🧾</span>
+          <span class="sc-circle">🧾<span id="sc-orders-badge" class="nav-badge" style="display:none;position:absolute;top:-4px;right:-4px;margin:0;border:2px solid #fff;">0</span></span>
           <span class="sc-label">Pedidos</span>
         </button>
         <button type="button" class="store-shortcut" data-shortcut="sales" onclick="switchView('sales')">
@@ -351,6 +341,10 @@
         <button type="button" class="store-shortcut" onclick="goHomeProfiles()">
           <span class="sc-circle">🔄</span>
           <span class="sc-label">Perfiles</span>
+        </button>
+        <button type="button" class="store-shortcut" onclick="logout()">
+          <span class="sc-circle" style="background:#FEE2E2;border-color:#FECACA;color:var(--red);">🚪</span>
+          <span class="sc-label" style="color:var(--red);">Salir</span>
         </button>
       </div>
     </div>
@@ -544,6 +538,7 @@
     </button>
     <button type="button" class="store-bnav-btn" data-bnav="orders" onclick="switchView('orders')">
       <span class="sb-icon">🧾</span>
+      <span id="bnav-orders-badge" class="nav-badge" style="display:none;position:absolute;top:0;right:calc(50% - 20px);margin:0;min-width:16px;height:16px;font-size:9px;padding:0 4px;">0</span>
       <span>Pedidos</span>
     </button>
     <button type="button" class="store-bnav-btn" data-bnav="sales" onclick="switchView('sales')">
@@ -922,17 +917,19 @@ function showNewOrderNotification(order){
 }
 
 function updatePendingOrdersBadge(orders){
-  const badge = document.getElementById('nav-orders-badge');
-  if(!badge) return;
   const pendingCount = (orders || []).filter(o =>
     o.status === 'pendiente' && !(o.customer_name === 'Venta en tienda')
   ).length;
-  if(pendingCount > 0){
-    badge.textContent = pendingCount;
-    badge.style.display = 'inline-flex';
-  } else {
-    badge.style.display = 'none';
-  }
+  ['nav-orders-badge', 'sc-orders-badge', 'bnav-orders-badge'].forEach(id => {
+    const badge = document.getElementById(id);
+    if(!badge) return;
+    if(pendingCount > 0){
+      badge.textContent = pendingCount;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
 }
 
 async function checkNewOrdersInBackground(){
@@ -1164,8 +1161,62 @@ function logout(){
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-function switchView(view){
+let currentStoreView = 'inventory';
+
+function pushStoreHistoryGuard(view){
+  try{
+    history.pushState({ vfStoreGuard: true, view: view || currentStoreView || 'inventory' }, '', window.location.href);
+  }catch(_e){}
+}
+
+window.addEventListener('popstate', () => {
+  const invModal = document.getElementById('inventory-modal');
+  const resetModal = document.getElementById('store-reset-modal');
+  const privModal = document.getElementById('store-privacy-modal');
+  if(invModal && invModal.style.display === 'flex'){
+    closeInventoryModal();
+    pushStoreHistoryGuard(currentStoreView);
+    return;
+  }
+  if(resetModal && resetModal.style.display === 'flex'){
+    closeStoreResetModal();
+    pushStoreHistoryGuard(currentStoreView);
+    return;
+  }
+  if(privModal && privModal.style.display === 'flex'){
+    privModal.style.display = 'none';
+    pushStoreHistoryGuard(currentStoreView);
+    return;
+  }
+  if(TOKEN && STORE){
+    if(currentStoreView !== 'inventory'){
+      switchView('inventory', true);
+      pushStoreHistoryGuard('inventory');
+      return;
+    }
+    if(typeof filterOnlyLowStock !== 'undefined' && filterOnlyLowStock){
+      setLowStockFilter(false, false);
+      pushStoreHistoryGuard('inventory');
+      return;
+    }
+    pushStoreHistoryGuard('inventory');
+  } else {
+    pushStoreHistoryGuard('login');
+  }
+});
+
+// Inicializar guardia de historial al cargar para evitar que el botón Atrás del celular devuelva a perfiles
+try{
+  history.replaceState({ vfStoreGuard: true, view: 'inventory' }, '', window.location.href);
+  pushStoreHistoryGuard('inventory');
+}catch(_e){}
+
+function switchView(view, fromPopState = false){
+  currentStoreView = view;
   try{ localStorage.setItem('store_active_view', view); }catch(_e){}
+  if(!fromPopState){
+    pushStoreHistoryGuard(view);
+  }
   document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === view));
   document.querySelectorAll('.store-shortcut[data-shortcut]').forEach(el => el.classList.toggle('active', el.dataset.shortcut === view));
   document.querySelectorAll('.store-bnav-btn[data-bnav]').forEach(el => el.classList.toggle('active', el.dataset.bnav === view));

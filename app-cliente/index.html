@@ -1147,6 +1147,7 @@ async function renderResults(products, refreshCategories = false){
 }
 
 async function openDetail(productId, name){
+  pushClientHistoryGuard('detail');
   document.getElementById('detail-name').textContent = name;
   document.getElementById('detail-overlay').style.display = 'block';
   const params = new URLSearchParams();
@@ -1301,6 +1302,7 @@ function formatQuantity(value){
 }
 
 function openCart(){
+  pushClientHistoryGuard('cart');
   renderCartLines();
   document.getElementById('cart-modal').style.display = 'flex';
 }
@@ -1347,6 +1349,7 @@ function removeCartItem(index){
 }
 
 function openCheckout(){
+  pushClientHistoryGuard('checkout');
   const total = Math.round(cart.reduce((s,i) => s + i.quantity * i.price, 0));
   const selectedStore = cart[0] || {};
   const offersDelivery = selectedStore.offers_delivery !== false;
@@ -1508,6 +1511,7 @@ function showCheckoutError(message){
 let trackingTimer = null;
 
 async function openTracking(){
+  pushClientHistoryGuard('tracking');
   if(!lastOrder){
     document.getElementById('tracking-content').innerHTML = '<h3>Seguir pedido</h3><p class="tracking-location">Cuando confirmes un pedido podrás consultar aquí su estado.</p>';
   } else {
@@ -1543,6 +1547,7 @@ async function renderTracking(){
 }
 
 async function openStoresMap(){
+  pushClientHistoryGuard('map');
   document.getElementById('stores-map-modal').style.display = 'block';
   const list = document.getElementById('stores-map-list');
   list.innerHTML = '<div class="loading-state">Buscando tiendas cercanas (≤ 5 km)...</div>';
@@ -1573,6 +1578,7 @@ async function openStoresMap(){
 function closeStoresMap(){ document.getElementById('stores-map-modal').style.display = 'none'; }
 
 async function openOrderHistory(){
+  pushClientHistoryGuard('history');
   const box = document.getElementById('tracking-content');
   box.innerHTML = '<h3>Mis pedidos</h3><p class="tracking-location">Cargando historial de tu cuenta...</p>';
   document.getElementById('tracking-modal').style.display = 'flex';
@@ -1639,6 +1645,77 @@ function resetCart(){
   cart = []; currentStoreForCart = null;
   updateCartBar();
 }
+
+function pushClientHistoryGuard(screen = 'home'){
+  try{
+    history.pushState({ vfClientGuard: true, screen }, '', window.location.href);
+  }catch(_e){}
+}
+
+window.addEventListener('popstate', () => {
+  const checkoutModal = document.getElementById('checkout-modal');
+  const cartModal = document.getElementById('cart-modal');
+  const trackingModal = document.getElementById('tracking-modal');
+  const mapModal = document.getElementById('stores-map-modal');
+  const detailOverlay = document.getElementById('detail-overlay');
+  const resetModal = document.getElementById('customer-reset-modal');
+  const privModal = document.getElementById('privacy-policy-modal');
+
+  if(checkoutModal && checkoutModal.style.display === 'flex'){
+    closeCheckout();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(cartModal && cartModal.style.display === 'flex'){
+    closeCart();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(trackingModal && trackingModal.style.display === 'flex'){
+    closeTracking();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(mapModal && mapModal.style.display === 'block'){
+    closeStoresMap();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(detailOverlay && detailOverlay.style.display === 'block'){
+    closeDetail();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(resetModal && resetModal.style.display === 'flex'){
+    closeCustomerResetModal();
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(privModal && privModal.style.display === 'flex'){
+    privModal.style.display = 'none';
+    pushClientHistoryGuard('home');
+    return;
+  }
+  const searchInput = document.getElementById('search-input');
+  if(searchInput && searchInput.value.trim() !== ''){
+    searchInput.value = '';
+    onSearch('');
+    pushClientHistoryGuard('home');
+    return;
+  }
+  if(activeCategory !== ''){
+    const firstChip = document.querySelector('.category-chip');
+    setCategory('', firstChip);
+    pushClientHistoryGuard('home');
+    return;
+  }
+  pushClientHistoryGuard('home');
+});
+
+try{
+  history.replaceState({ vfClientGuard: true, screen: 'home' }, '', window.location.href);
+  pushClientHistoryGuard('home');
+}catch(_e){}
 
 if(customerToken && customerProfile){
   enterCustomerApp();
