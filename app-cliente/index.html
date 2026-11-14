@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Encuentra tu producto · Inventario</title>
+<title>Venta Fast · Cliente</title>
+<meta name="theme-color" content="#1E3A8A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -443,6 +446,16 @@ try{
 }catch(_e){
   customerProfile = null;
 }
+try{
+  if((window.Capacitor || window.location.hostname === 'localhost') && !sessionStorage.getItem('vf_entered_from_profiles')){
+    if(localStorage.getItem('store_token') && localStorage.getItem('store_data')){
+      sessionStorage.setItem('vf_entered_from_profiles', '1');
+      window.location.replace('tienda.html');
+    } else if(!customerToken){
+      window.location.replace('perfiles.html');
+    }
+  }
+}catch(_e){}
 const LOCAL_CUSTOMERS_KEY = 'inventario_customer_accounts';
 const CATALOG_CACHE_KEY = 'inventario_catalog_5km_only_v2';
 try{

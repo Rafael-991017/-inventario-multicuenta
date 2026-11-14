@@ -4,11 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Venta Fast · Inventario y Perfiles</title>
+<meta name="theme-color" content="#1E3A8A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Venta Fast">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{--navy:#1B2A41;--cream:#F7F5F0;--paper:#fff;--amber:#E0A458;--amber-dark:#C4863C;--green:#3F6C51;--red:#B14A42;--ink:#1B2A41;--muted:#6B7280;--line:#E4E0D6}
-  *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif}h1,h2,h3{font-family:'Sora',sans-serif;margin:0}.shell{width:min(560px,100%);margin:auto;padding:28px 18px}.hero{background:var(--navy);color:#fff;padding:28px 22px;border-radius:0 0 22px 22px}.eyebrow{color:var(--amber);font:600 11px monospace;letter-spacing:.1em;text-transform:uppercase}.hero h1{font-size:27px;margin-top:10px}.hero p{color:rgba(255,255,255,.7);font-size:14px;line-height:1.5}.section-title{font-size:18px;margin:26px 0 12px}.profile-card{display:block;width:100%;text-align:left;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px rgba(27,42,65,.06)}.profile-card:hover{border-color:var(--amber)}.profile-card strong{display:block;font:600 16px 'Sora',sans-serif}.profile-card span{display:block;color:var(--muted);font-size:13px;margin-top:6px}.profile-card .tag{display:inline-block;color:var(--green);font-size:11px;font-weight:700;margin-top:12px}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:22px}
+  :root{--navy:#1B2A41;--blue:#2563EB;--cream:#F7F5F0;--paper:#fff;--amber:#E0A458;--amber-dark:#C4863C;--green:#3F6C51;--red:#B14A42;--ink:#1B2A41;--muted:#6B7280;--line:#E4E0D6}
+  *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif}h1,h2,h3{font-family:'Sora',sans-serif;margin:0}.shell{width:min(560px,100%);margin:auto;padding:28px 18px}.hero{background:linear-gradient(135deg,#0F2942 0%,#1E3A8A 60%,#2563EB 100%);color:#fff;padding:28px 22px;border-radius:0 0 22px 22px}.eyebrow{color:#93C5FD;font:600 11px monospace;letter-spacing:.1em;text-transform:uppercase}.hero h1{font-size:27px;margin-top:10px}.hero p{color:rgba(255,255,255,.82);font-size:14px;line-height:1.5}.section-title{font-size:18px;margin:26px 0 12px}.profile-card{display:block;width:100%;text-align:left;padding:18px;margin:12px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 12px rgba(27,42,65,.06)}.profile-card:hover{border-color:var(--blue)}.profile-card strong{display:block;font:600 16px 'Sora',sans-serif}.profile-card span{display:block;color:var(--muted);font-size:13px;margin-top:6px}.profile-card .tag{display:inline-block;color:var(--blue);font-size:11px;font-weight:700;margin-top:12px}.note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:22px}
+  .download-app-box{background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);border:1.5px solid #93C5FD;border-radius:16px;padding:18px;margin:4px 0 22px;box-shadow:0 8px 24px rgba(37,99,235,.10)}
+  .download-app-box .dl-badge{display:inline-block;background:#1E3A8A;color:#fff;font:700 10.5px monospace;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:8px}
+  .download-app-box h3{font-size:16.5px;color:#0F2942;margin-bottom:5px}
+  .download-app-box p{margin:0 0 14px;font-size:12.5px;color:#334155;line-height:1.45}
+  .dl-buttons-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dl-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 12px;border-radius:10px;font:700 12.5px 'Inter',sans-serif;text-decoration:none;cursor:pointer;border:none;text-align:center;transition:.15s}
+  .dl-btn.android{background:linear-gradient(135deg,#1E3A8A,#2563EB);color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.25)}
+  .dl-btn.pc{background:#0F2942;color:#fff;box-shadow:0 4px 12px rgba(15,41,66,.2)}
+  .dl-btn.pwa{grid-column:1 / -1;background:#fff;color:#1E3A8A;border:1.5px solid #2563EB}
+  .dl-btn:hover{transform:translateY(-1px)}
+  @media(max-width:480px){.dl-buttons-grid{grid-template-columns:1fr}}
   .policy-link-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--navy);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
   .policy-link-btn:hover{border-color:var(--amber)}
   .privacy-overlay{position:fixed;inset:0;background:rgba(27,42,65,.82);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999;backdrop-filter:blur(3px)}
@@ -28,6 +46,27 @@
 <body>
 <header class="hero"><div class="shell"><span class="eyebrow">Venta Fast</span><h1>¿Cómo quieres entrar?</h1><p>Elige el perfil que usarás en esta aplicación.</p></div></header>
 <main class="shell">
+  <!-- Tarjeta de Descarga e Instalación de la App (Android APK / Windows PC EXE / PWA 1 Clic) -->
+  <div class="download-app-box" id="download-app-box">
+    <span class="dl-badge">📲 Aplicación Oficial · PC y Android</span>
+    <h3>Instalar o descargar Venta Fast como App</h3>
+    <p>Descarga el instalador para usar Venta Fast como aplicación independiente (sin barra de navegador) en celulares Android o computadores Windows.</p>
+    <div class="dl-buttons-grid">
+      <a class="dl-btn android" href="descargas/VentaFast.apk" download="VentaFast.apk">
+        <span>🤖</span>
+        <span>Descargar APK Android</span>
+      </a>
+      <a class="dl-btn pc" href="descargas/VentaFast-PC.exe" download="VentaFast-PC.exe">
+        <span>💻</span>
+        <span>Descargar App PC (.exe)</span>
+      </a>
+      <button type="button" class="dl-btn pwa" id="btn-install-pwa" onclick="installAppDirect()">
+        <span>⚡</span>
+        <span id="btn-install-pwa-text">Instalar App directo en este dispositivo (1 clic)</span>
+      </button>
+    </div>
+  </div>
+
   <h2 class="section-title">Perfiles móviles</h2>
   <button class="profile-card" onclick="go('index.html')">
     <strong>Cliente</strong>
@@ -84,6 +123,23 @@
       <button type="button" onclick="stayInActiveSession()" style="flex:1;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--navy);font:700 13px 'Inter',sans-serif;cursor:pointer;">No, volver</button>
       <button type="button" onclick="confirmLogoutFromProfiles()" style="flex:1;padding:12px;border:none;border-radius:10px;background:var(--red);color:#fff;font:700 13px 'Inter',sans-serif;cursor:pointer;">Sí, cerrar sesión</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Guía de Instalación Rápida -->
+<div class="privacy-overlay" id="install-guide-overlay" role="dialog" aria-modal="true" style="z-index:10001;">
+  <div class="privacy-modal" style="width:min(460px,100%);padding:24px;">
+    <span class="privacy-badge" style="background:#DBEAFE;color:#1E3A8A;">📲 Instalar Venta Fast</span>
+    <h2 style="font-size:19px;margin-bottom:10px;">Cómo abrir Venta Fast como App</h2>
+    <div class="privacy-body" style="margin:12px 0;font-size:13px;line-height:1.55;text-align:left;">
+      <p><strong>💻 En Computador (Windows / Mac):</strong><br>
+      1. Descarga y abre <strong>VentaFast-PC.exe</strong> (crea automáticamente el icono en tu Escritorio y abre la app sin navegador), <em>o bien</em>:<br>
+      2. En la barra superior derecha de Chrome / Edge / Brave haz clic en el icono <strong>⊕ Instalar Venta Fast</strong>.</p>
+      <p style="margin-bottom:0;"><strong>🤖 En Celular Android:</strong><br>
+      1. Pulsa <strong>Descargar APK Android (VentaFast.apk)</strong> y ábrelo para instalar la app nativa, <em>o bien</em>:<br>
+      2. Toca el menú <strong>⋮</strong> de Chrome arriba a la derecha y elige <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.</p>
+    </div>
+    <button type="button" class="privacy-accept-btn" style="background:#1E3A8A;" onclick="document.getElementById('install-guide-overlay').style.display='none'">Entendido</button>
   </div>
 </div>
 
@@ -198,7 +254,10 @@ function acceptPrivacyPolicy(){
   if(pendingNavigationPath){
     const target = pendingNavigationPath;
     pendingNavigationPath = null;
-    try{ sessionStorage.setItem('vf_active_profile_page', target); }catch(_e){}
+    try{
+      sessionStorage.setItem('vf_entered_from_profiles', '1');
+      sessionStorage.setItem('vf_active_profile_page', target);
+    }catch(_e){}
     window.location.href = target;
   }
 }
@@ -209,11 +268,45 @@ function go(path){
     openPrivacyModal(true);
     return;
   }
-  try{ sessionStorage.setItem('vf_active_profile_page', path); }catch(_e){}
+  try{
+    sessionStorage.setItem('vf_entered_from_profiles', '1');
+    sessionStorage.setItem('vf_active_profile_page', path);
+  }catch(_e){}
   window.location.href = path;
 }
 
+let deferredInstallPrompt = null;
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const txt = document.getElementById('btn-install-pwa-text');
+  if(txt) txt.textContent = 'Instalar App ahora en este dispositivo (1 clic)';
+});
+
+async function installAppDirect(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    try{ await deferredInstallPrompt.userChoice; }catch(_e){}
+    deferredInstallPrompt = null;
+    return;
+  }
+  document.getElementById('install-guide-overlay').style.display = 'flex';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
+  const isStandalone = Boolean(window.Capacitor) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if(window.Capacitor){
+    const dlBox = document.getElementById('download-app-box');
+    if(dlBox) dlBox.style.display = 'none';
+  } else if(isStandalone){
+    const pwaBtn = document.getElementById('btn-install-pwa');
+    if(pwaBtn) pwaBtn.style.display = 'none';
+  }
   if(!hasAcceptedPrivacy()){
     openPrivacyModal(true);
   }

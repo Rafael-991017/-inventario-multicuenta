@@ -1,6 +1,6 @@
 {
   "appId": "com.inventario.cliente",
-  "appName": "Vent Inventario",
+  "appName": "Venta Fast",
   "webDir": "app-cliente",
   "server": {
     "cleartext": true
