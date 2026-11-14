@@ -285,7 +285,11 @@ try{
   customerProfile = null;
 }
 const LOCAL_CUSTOMERS_KEY = 'inventario_customer_accounts';
-const CATALOG_CACHE_KEY = 'inventario_catalog_cache';
+const CATALOG_CACHE_KEY = 'inventario_catalog_5km_only_v2';
+try{
+  localStorage.removeItem('inventario_catalog_cache');
+  localStorage.removeItem('customer_ignore_distance');
+}catch(_e){}
 // Despertar el servidor en segundo plano apenas carga la página
 fetch(`${API_URL}/`).catch(() => {});
 
@@ -814,9 +818,17 @@ async function loadProducts(q){
     try{
       const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || '[]');
       if(Array.isArray(cached) && cached.length > 0){
-        productCards = cached;
-        renderCategoryFilters(productCards.map(c => c.product));
-        await renderResults(productCards.map(c => c.product), false);
+        const filteredCached = await Promise.all(cached.map(async c => ({
+          product: c.product,
+          availability: await filterStoresWithinRadius(c.availability || [], false)
+        })));
+        productCards = filteredCached.filter(c => c.availability.length > 0);
+        if(productCards.length > 0){
+          renderCategoryFilters(productCards.map(c => c.product));
+          await renderResults(productCards.map(c => c.product), false);
+        } else {
+          box.innerHTML = `<div class="loading-state">${loadingMsg}</div>`;
+        }
       } else {
         box.innerHTML = `<div class="loading-state">${loadingMsg}</div>`;
       }
