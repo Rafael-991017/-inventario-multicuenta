@@ -1,5 +1,8 @@
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from .routers import auth as auth_router
 from .routers import stores as stores_router
@@ -18,16 +21,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Permite que el panel de tienda (PC) y la app de cliente (Android) hablen con la API.
-# En producción, reemplaza "*" por los dominios/orígenes exactos que usarás.
+# Permite que cualquier navegador (PC, celular, GitHub Pages, Render, Android) se conecte a la API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "null",
-        "http://localhost",
-        "https://localhost",
-        "capacitor://localhost",
-    ],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,7 +37,24 @@ app.include_router(orders_router.router)
 app.include_router(couriers_router.router)
 app.include_router(admin_router.router)
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+APP_CLIENTE_DIR = REPO_ROOT / "app-cliente"
+PANEL_TIENDA_DIR = REPO_ROOT / "panel-tienda"
+
 
 @app.get("/")
 def root():
-    return {"status": "ok", "mensaje": "API de inventario funcionando. Ve a /docs para probarla."}
+    return {"status": "ok", "mensaje": "API de inventario funcionando. Entra a /app/perfiles.html para abrir Venta Fast."}
+
+
+@app.get("/app")
+def redirect_to_app():
+    return RedirectResponse(url="/app/perfiles.html")
+
+
+if APP_CLIENTE_DIR.exists():
+    app.mount("/app", StaticFiles(directory=str(APP_CLIENTE_DIR), html=True), name="app-cliente")
+    app.mount("/app-cliente", StaticFiles(directory=str(APP_CLIENTE_DIR), html=True), name="app-cliente-compat")
+
+if PANEL_TIENDA_DIR.exists():
+    app.mount("/panel-tienda", StaticFiles(directory=str(PANEL_TIENDA_DIR), html=True), name="panel-tienda")
